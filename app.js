@@ -3,6 +3,25 @@ const http = require('http').createServer(app);
 const { Expo } = require('expo-server-sdk');
 const mysql = require('mysql2');
 const expo = new Expo();
+const AWS = require('aws-sdk');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const upload = multer({
+    storage: multerS3({
+        s3: new AWS.S3({
+            endpoint: new AWS.Endpoint('nyc3.digitaloceanspaces.com'),
+            accessKeyId: 'C7RMAXBJ5FFM7XVT2E5E',
+            secretAccessKey: 'Nde/mtwFsgfo/EwBsviLTLmn+3MOWfADjuCabko9INE'
+        }),
+        bucket: 'lafaas-spaces',
+        acl: 'public-read',
+        contentType: multerS3.AUTO_CONTENT_TYPE,
+        key: function (req, file, cb) {
+            console.log("Uploaded file " + file.originalname);
+            cb(null, file.originalname); //use Date.now().toString() for unique file keys
+        }
+    })
+});
 
 app.get('/', (req, res) => {
     res.send(req.headers['x-forwarded-for'] + " eiei");
@@ -39,6 +58,10 @@ app.get('/db', (req, res) => {
         }
     );
 })
+
+app.post('/upload', upload.array('photo', 1), function (req, res, next) {
+    res.send("Upload success");
+});
 
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
