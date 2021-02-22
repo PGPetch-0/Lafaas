@@ -43,9 +43,9 @@ app.get('/noti', (req, res) => {
 app.get('/db', (req, res) => {
 
     let connection = mysql.createConnection({
-        host: "db-mysql-sgp1-71945-do-user-8609677-0.b.db.ondigitalocean.com",
+        host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
         user: "doadmin",
-        password: "dwe606qmttxyj0ow",
+        password: "wmvyr6bjdsp1nv3w",
         database: "defaultdb",
         port: "25060"
     });
