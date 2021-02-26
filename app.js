@@ -42,7 +42,6 @@ app.get('/noti', (req, res) => {
 
 app.get('/db', (req, res) => {
 
-    console.log("db got called");
     let connection = mysql.createConnection({
         host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
         user: "doadmin",
