@@ -49,12 +49,13 @@ app.get('/db', (req, res) => {
         database: "defaultdb",
         port: "25060"
     });
-
+    
     connection.query(
         'SELECT * FROM `Persons`',
         function (err, results, fields) {
             //res.send(results); // results contains rows returned by server
             res.send(fields); // fields contains extra meta data about results, if available
+            console.log(fields);
         }
     );
 })
