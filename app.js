@@ -49,7 +49,7 @@ app.get('/db', (req, res) => {
         database: "defaultdb",
         port: "25060"
     });
-
+    connection.connect();
     connection.query(
         'SELECT * FROM `Persons`',
         function (err, results, fields) {
@@ -57,6 +57,7 @@ app.get('/db', (req, res) => {
             res.send(fields); // fields contains extra meta data about results, if available
         }
     );
+    connection.end();
 })
 
 app.post('/upload', upload.array('photo', 1), function (req, res, next) {
