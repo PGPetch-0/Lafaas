@@ -89,13 +89,7 @@ app.get('/login', (req,res) =>{
 });
 
 app.get('/registeritem', (req,res) =>{
-    //query all fields
-    var item_name = req.query.item_name;
-    var location_lat = req.query.location_lat;
-    var location_long = req.query.location_long;
-    var location_desc = req.query.location_desc;
     
-    //insert according to type
 });
 
 //***ADMINISTATION (backend only)***
