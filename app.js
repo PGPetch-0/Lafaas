@@ -143,10 +143,6 @@ app.get('/login', (req,res) =>{
     })
 });
 
-app.get('/registeritem', (req,res) =>{
-    
-});
-
 //***ADMINISTATION (backend only)***
 app.get('/db', (req, res) => { // used to check content of table
     connection.query(
