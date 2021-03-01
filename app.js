@@ -1,3 +1,4 @@
+//imported stuff
 const app = require('express')();
 const http = require('http').createServer(app);
 const { Expo } = require('expo-server-sdk');
@@ -6,6 +7,8 @@ const expo = new Expo();
 const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
+
+//some variable setups
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
@@ -22,10 +25,17 @@ const upload = multer({
         }
     })
 });
+let connection = mysql.createConnection({
+    host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
+    user: "doadmin",
+    password: "wmvyr6bjdsp1nv3w",
+    database: "defaultdb",
+    port: "25060"
+});
 
 app.get('/', (req, res) => {
     res.send(req.headers['x-forwarded-for'] + " eiei");
-})
+});
 
 app.get('/noti', (req, res) => {
 
@@ -38,17 +48,9 @@ app.get('/noti', (req, res) => {
     }
 
     res.send("Done");
-})
+});
 
 app.get('/db', (req, res) => {
-
-    let connection = mysql.createConnection({
-        host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
-        user: "doadmin",
-        password: "wmvyr6bjdsp1nv3w",
-        database: "defaultdb",
-        port: "25060"
-    });
 
     connection.query(
         'SELECT * FROM `Persons`',
@@ -57,7 +59,8 @@ app.get('/db', (req, res) => {
             res.send(fields); // fields contains extra meta data about results, if available
         }
     );
-})
+});
+
 
 app.post('/upload', upload.array('photo', 1), function (req, res, next) {
     res.send("Upload success");
