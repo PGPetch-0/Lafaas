@@ -51,12 +51,20 @@ app.get('/noti', (req, res) => {
 });
 
 app.get('/db', (req, res) => {
-
     connection.query(
         'SELECT * FROM `Persons`',
         function (err, results, fields) {
-            //res.send(results); // results contains rows returned by server
-            res.send(fields); // fields contains extra meta data about results, if available
+            res.send(results); // results contains rows returned by server
+            //res.send(fields); // fields contains extra meta data about results, if available
+        }
+    );
+});
+
+app.get('/insertdb', (req,res) =>{
+    connection.query(
+        'INSERT INTO Persons VALUES (\'0\', \'user0\', \'pass0\', \'example@gmail.com\', \'first\', \'last\')',
+        function(err,results){
+            console.log('inserted');
         }
     );
 });
