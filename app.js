@@ -33,7 +33,6 @@ let connection = mysql.createConnection({
     port: "25060"
 });
 
-//****MAIN METHODS (frontend will call this) ****
 app.get('/', (req, res) => {
     res.send(req.headers['x-forwarded-for'] + " eiei");
 });
@@ -51,57 +50,9 @@ app.get('/noti', (req, res) => {
     res.send("Done");
 });
 
-app.get('/createuser', (req,res) =>{
-    //get user, pass, email, first, last
-    connection.query("SELECT 1 FROM Persons WHERE username = '"+req.query.user+"' ORDER BY username LIMIT 1", function (err, results, fields) {
-        if (err) {
-            console.log(err);
-        }if (results.length>0) {
-            console.log(results);
-            console.log('fail');
-            res.send("user already exists");
-        } else {
-            console.log('insert');
-            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('"+req.query.user+"', '"+req.query.pass+"', '"+req.query.email+"', '"+req.query.fname+"', '"+req.query.lname+"')",
-            function(err,results){
-            console.log(req.query.user);
-            });
-        }
-    });
-});
-
-app.get('/login', (req,res) =>{
-    //get user, pass
-    let user=req.query.user;
-    let pass=req.query.pass;
-    let find = "SELECT username,password FROM Persons WHERE username='"+user+"'";
-    connection.query(find, function(err, results){
-        if(err){
-            console.log(err);
-            return;
-        } 
-        if(results[0].password==pass){
-            res.send("successful login");
-        }else{
-            res.send("wrong password");
-        }
-    })
-});
-
-app.get('/registeritem', (req,res) =>{
-    //query all fields
-    var item_name = req.query.item_name;
-    var location_lat = req.query.location_lat;
-    var location_long = req.query.location_long;
-    var location_desc = req.query.location_desc;
-    
-    //insert according to type
-});
-
-//***ADMINISTATION (backend only)***
-app.get('/db', (req, res) => { // used to check content of table
+app.get('/db', (req, res) => {
     connection.query(
-        'SELECT * FROM `Persons`', // change table name to the one you want to check
+        'SELECT * FROM `Persons`',
         function (err, results, fields) {
             res.send(results); // results contains rows returned by server
             //res.send(fields); // fields contains extra meta data about results, if available
@@ -109,13 +60,19 @@ app.get('/db', (req, res) => { // used to check content of table
     );
 });
 
-/*app.get('/inserttry', (req,res)=>{
-    connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES (\'testautoincre\', \'pass0\', \'example@gmail.com\', \'je\', \'nu\')",
-    function(err,results){
-        console.log('done');
-    });
-}
-);*/
+app.get('/insertdb', (req,res) =>{
+    connection.query(
+        'INSERT INTO Persons VALUES (\'0\', \'user0\', \'pass0\', \'example@gmail.com\', \'first\', \'last\')',
+        function(err,results){
+            console.log('inserted');
+        }
+    );
+});
+
+
+app.post('/upload', upload.array('photo', 1), function (req, res, next) {
+    res.send("Upload success");
+});
 
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
