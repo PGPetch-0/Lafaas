@@ -37,6 +37,61 @@ app.get('/', (req, res) => {
     res.send(req.headers['x-forwarded-for'] + " eiei");
 });
 
+app.get('/registeritem', (req,res) =>{
+    //query all fields
+    var item_name = req.query.item_name;
+    var location_lat = req.query.location_lat;
+    var location_long = req.query.location_long;
+    var location_desc = req.query.location_desc;
+    var category = req.query.category;
+    var color = req.query.color;
+    var description = req.query.description;
+    //variables for Items_found
+    var type;
+    var img_url;
+    var current_location = 'undefined'; // storage location aka locker or faculty. When it's still in finder's possession, it will be labeled as undefined.
+    var in_locker = 0; //0=false 1=true
+    var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
+    console.log(date_added);
+    if(req.query.type == 'found' ){
+        img_url = req.query.url;
+        type = 0;
+    }
+    //insert according to type
+    if(req.query.type == 'lost'){
+        connection.query(
+            "INSERT INTO Items_lost(item_name,location_lat, location_long, location_desc, category, color, description) VALUES('"
+            +item_name+"',"+ location_lat+"," +location_long+",'" +location_desc+"','" +category+"','" +color+"','" +description+"')",
+            function(err,results){
+                if(err){
+                    console.log(err);
+                    res.send(err);
+                }else{
+                    console.log('inserted lost item');
+                    res.send('inserted lost item');
+                }
+            }
+        );
+    }else if(req.query.type == 'found'){
+        connection.query(
+            "INSERT INTO Items_found(item_name, location_lat, location_long, location_desc, category, color, description, type, image_url, current_location, in_locker, date_added) VALUES('"
+            + item_name +"'," + location_lat+"," +location_long+",'" +location_desc+"','" +category+"','" +color+"','" +description+"',0,'"+img_url+"','undefined',0,'"+date_added+"')",
+            function(err,results){
+                if(err){
+                    console.log(err);
+                    res.send(err);
+                }else{
+                    console.log('inserted found item');
+                    res.send('inserted found item');
+                }
+            }
+        );
+    }else{
+        res.send('type parameter error');
+    }
+
+});
+
 app.get('/noti', (req, res) => {
 
     const chunks = expo.chunkPushNotifications([
@@ -62,7 +117,7 @@ app.get('/db', (req, res) => {
 
 app.get('/insertdb', (req,res) =>{
     connection.query(
-        'INSERT INTO Persons VALUES (\'0\', \'user0\', \'pass0\', \'example@gmail.com\', \'first\', \'last\')',
+        "INSERT INTO Persons(username, password, email, f_name, l_name) VALUES ('u2', 'p2', 'm@gmail.com', 'f2', 'l2')",
         function(err,results){
             console.log('inserted');
         }
