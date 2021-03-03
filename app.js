@@ -74,6 +74,23 @@ app.post('/upload', upload.array('photo', 1), function (req, res, next) {
     res.send("Upload success");
 });
 
+//Item Listing System Methods
+
+//Item Reg
+app.get('/item_reg', (req, res) => {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url)) AS 'Registered' FROM Items_found WHERE type = 0", function(err, results) {
+        if (err) throw err;
+        res.json(results);
+    });
+});
+//Item Claimed
+app.get('/item_claimed', (req, res) => {
+    connection.query("SELECT JSON_ARRAYAGG(('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1", function(err, results) {
+        if (err) throw err;
+        res.json(results);
+    });
+});
+
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
