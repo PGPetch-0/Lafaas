@@ -24,7 +24,8 @@ const upload = multer({
             cb(null, file.originalname); //use Date.now().toString() for unique file keys
         }
     })
-});
+}).array('upload',1);
+
 let connection = mysql.createConnection({
     host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
     user: "doadmin",
@@ -142,6 +143,16 @@ app.get('/login', (req,res) =>{
         }
     })
 });
+
+//upload picture (need to be from input "file" in html)
+app.post('/upload', function (request, response, next) {
+    upload(request, response, function (error) {
+      if (error) {
+        console.log(error);
+      }
+      console.log('File uploaded successfully.');
+    });
+  });
 
 //***ADMINISTATION (backend only)***
 app.get('/db', (req, res) => { // used to check content of table
