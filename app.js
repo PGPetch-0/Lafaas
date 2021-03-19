@@ -165,18 +165,18 @@ app.get('/db', (req, res) => { // used to check content of table
     );
 });
 
-//Item Listing System Methods
+///Item Listing System Methods
 
 //Item Reg
 app.get('/item_reg', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url)) AS 'Registered' FROM Items_found WHERE type = 0", function(err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url)) AS 'Registered' FROM Items_found WHERE type = 0 AND device_token != " + req.query.token + " ORDER BY date_added ASC", function(err, results) {
         if (err) throw err;
         res.json(results);
     });
 });
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1", function(err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1", function(err, results) {
         if (err) throw err;
         res.json(results);
     });
