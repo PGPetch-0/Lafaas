@@ -7,6 +7,8 @@ const expo = new Expo();
 const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
+const jwt = require('jsonwebtoken');
+const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 
 //some variable setups
 const upload = multer({
@@ -34,9 +36,21 @@ let connection = mysql.createConnection({
     port: "25060"
 });
 
+function generateToken(user){
+    return jwt.sign({username: user}, token_secret, {expiresIn:60});
+} 
+
 //****MAIN METHODS (frontend will call this) ****
 app.get('/', (req, res) => {
-    res.send(req.headers['x-forwarded-for'] + " eiei");
+    //res.send(req.headers['x-forwarded-for'] + " eiei");
+    if(req.query.token!='undefined'){
+        jwt.verify(req.query.token,token_secret, (err, result) => { 
+            if (err){
+                return res.status(400).send('unauthenticated user'); 
+            } 
+            res.send('authenticated user: '+result['username']); 
+        }); 
+    }
 });
 
 app.get('/registeritem', (req,res) =>{
@@ -120,14 +134,15 @@ app.get('/createuser', (req,res) =>{
             console.log('insert');
             connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('"+req.query.user+"', '"+req.query.pass+"', '"+req.query.email+"', '"+req.query.fname+"', '"+req.query.lname+"')",
             function(err,results){
-            console.log(req.query.user);
+            res.send('successfully created user: '+req.query.user);
             });
         }
     });
 });
 
 app.get('/login', (req,res) =>{
-    //get user, pass
+    //get user, pass  
+    //add token gen
     let user=req.query.user;
     let pass=req.query.pass;
     let find = "SELECT username,password FROM Persons WHERE username='"+user+"'";
@@ -137,9 +152,9 @@ app.get('/login', (req,res) =>{
             return;
         } 
         if(results[0].password==pass){
-            res.send("successful login");
+            res.send("successful login, token="+ generateToken(user));
         }else{
-            res.send("wrong password");
+            res.send("unsuccessful login");
         }
     })
 });
