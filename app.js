@@ -37,7 +37,7 @@ let connection = mysql.createConnection({
 });
 
 function generateToken(user){
-    return jwt.sign({username: user}, token_secret, {expiresIn:60});
+    return jwt.sign({username: user}, token_secret, {expiresIn:1800});
 } 
 
 //****MAIN METHODS (frontend will call this) ****
