@@ -1,6 +1,7 @@
 //imported stuff
 const app = require('express')();
 const http = require('http').createServer(app);
+const bodyParser = require('body-parser');
 const { Expo } = require('expo-server-sdk');
 const mysql = require('mysql2');
 const expo = new Expo();
@@ -11,6 +12,8 @@ const jwt = require('jsonwebtoken');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 
 //some variable setups
+app.use(bodyParser.json());
+
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
@@ -37,7 +40,7 @@ let connection = mysql.createConnection({
 });
 
 function generateToken(user){
-    return jwt.sign({username: user}, token_secret, {expiresIn:1800});
+    return jwt.sign({username: user}, token_secret);
 } 
 
 //****MAIN METHODS (frontend will call this) ****
@@ -140,21 +143,31 @@ app.get('/createuser', (req,res) =>{
     });
 });
 
-app.get('/login', (req,res) =>{
-    //get user, pass  
-    //add token gen
-    let user=req.query.user;
-    let pass=req.query.pass;
+app.post('/login', (req,res) =>{
+    let user = req.body.user;
+    let pass = req.body.pass;
     let find = "SELECT username,password FROM Persons WHERE username='"+user+"'";
     connection.query(find, function(err, results){
         if(err){
             console.log(err);
             return;
-        } 
-        if(results[0].password==pass){
-            res.send("successful login, token="+ generateToken(user));
+        }
+        if(results.length === 0) {
+            res.json({
+                code: 0,
+                message: 'User not found'
+            })
+        } else if(results[0].password === pass){
+            res.json({
+                code: 1,
+                message: 'Successful login',
+                token: generateToken(user)
+            })
         }else{
-            res.send("unsuccessful login");
+            res.json({
+                code: 2,
+                message: 'Unsuccessful login'
+            })
         }
     })
 });
