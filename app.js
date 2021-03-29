@@ -87,12 +87,12 @@ app.get('/registeritem', (req,res) =>{
                     res.send(err);
                 }else{
                     console.log('inserted lost item');
-                    res.send('inserted lost item');
+                    res.redirect('/match');
                 }
             }
         );
     }else if(req.query.type == 'found'){
-        connection.query(
+        connection.query( //ยังไม่เห็นภาพว่าจะส่ง img เป็นรูปมายังไง
             "INSERT INTO Items_found(item_name, location_lat, location_long, location_desc, category, color, description, type, image_url, current_location, in_locker, date_added) VALUES('"
             + item_name +"'," + location_lat+"," +location_long+",'" +location_desc+"','" +category+"','" +color+"','" +description+"',0,'"+img_url+"','undefined',0,'"+date_added+"')",
             function(err,results){
@@ -101,13 +101,20 @@ app.get('/registeritem', (req,res) =>{
                     res.send(err);
                 }else{
                     console.log('inserted found item');
-                    res.send('inserted found item');
+                    res.redirect('/match');
                 }
             }
         );
     }else{
         res.send('type parameter error');
     }
+
+});
+
+// match to be implemented
+app.get('/match', (req,res) => {
+
+    res.send('match got called');
 
 });
 
