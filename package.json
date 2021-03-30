@@ -1,7 +1,7 @@
 {
-    "name": "lafass",
+    "name": "lafaas",
     "version": "1.0.0",
-    "description": "lafass api",
+    "description": "lafaas api",
     "scripts": {
         "start": "node app.js"
     },
