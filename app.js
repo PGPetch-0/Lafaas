@@ -11,7 +11,7 @@ const multerS3 = require('multer-s3');
 const jwt = require('jsonwebtoken');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 const colordiff = require('color-difference');
-
+const GeoPoint = require('geopoint');
 //some variable setups
 app.use(bodyParser.json());
 
@@ -211,6 +211,30 @@ app.get('/item_claimed', (req, res) => {
     });
 });
 
+//find dist from lost_item to every found_item
+app.get('/distanceCal/',(req,res) => {
+    const lost_id = req.query.lost_id
+    
+    connection.query(
+        `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
+        function (err, results, fields) {
+            if (err) throw err;
+            const lost_item = results[0]
+            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields)=>{
+                if (err) throw err;
+                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat),Number(lost_item.location_long));
+                var geopoint_found;
+                var res_msg = {"lost_id":Number(lost_id)};
+                results.forEach(function(result){
+                    console.log("item_id: "+result.item_id)
+                    geopoint_found = new GeoPoint(Number(result.location_lat),Number(result.location_long));
+                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true)*1000
+                    res_msg[`found_id${result.item_id}`] = distance;
+                })
+                res.send(res_msg);
+            })
+        });
+})
 //Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
 app.get('/color', (req,res) => {
     let color11 = req.query.color11;
