@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const { callbackify } = require('util');
 const { query } = require('express');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
+const colordiff = require('color-difference');
 
 //some variable setups
 app.use(bodyParser.json());
@@ -253,6 +254,33 @@ app.get('/item_claimed', (req, res) => {
         if (err) throw err;
         res.json(results[0]);
     });
+});
+
+//Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
+app.get('/color', (req,res) => {
+    let color11 = req.query.color11;
+    let color12 = req.query.color12;
+    let color21 = req.query.color21;
+    let color22 = req.query.color22;
+    if(typeof color12 == 'undefined' && typeof color22 == 'undefined'){
+        res.send(String(colordiff.compare(color11,color21)));
+    }else if(typeof color12=='undefined' || typeof color22=='undefined'){
+        if(typeof color12=='undefined'){
+            let v1=colordiff.compare(color11,color21);
+            let v2=colordiff.compare(color11,color22);
+            res.send (v1<v2 ? String(v1) : String(v2));
+        } else if(typeof color22=='undefined'){
+            let v1=colordiff.compare(color11,color21);
+            let v2=colordiff.compare(color12,color21);
+            res.send (v1<v2 ? String(v1) : String(v2));
+        } 
+    } else{
+        let v1 = colordiff.compare(color11,color21);
+        let v2 = colordiff.compare(color11,color22);
+        let v3 = colordiff.compare(color12,color21);
+        let v4 = colordiff.compare(color12,color22);
+        res.send(String(Math.min(v1,v2,v3,v4)));
+    }
 });
 
 
