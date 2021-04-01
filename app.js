@@ -209,8 +209,29 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
-
-
+//get distance from item_lost to every item found
+app.get('/distanceCal/',(req,res) => {
+    const lost_id = req.query.lost_id
+    connection.query(
+        `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
+        function (err, results, fields) {
+            if (err) throw err;
+            const lost_item = results[0]
+            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields)=>{
+                if (err) throw err;
+                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat),Number(lost_item.location_long));
+                var geopoint_found;
+                var res_msg = {"lost_id":Number(lost_id)};
+                results.forEach(function(result){
+                    console.log("item_id: "+result.item_id)
+                    geopoint_found = new GeoPoint(Number(result.location_lat),Number(result.location_long));
+                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true)*1000
+                    res_msg[`found_id${result.item_id}`] = distance;
+                })
+                res.send(res_msg);
+            })
+        });
+});
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
 });
