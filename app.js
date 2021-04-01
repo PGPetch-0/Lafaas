@@ -9,6 +9,8 @@ const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const jwt = require('jsonwebtoken');
+const { callbackify } = require('util');
+const { query } = require('express');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 
 //some variable setups
@@ -56,45 +58,75 @@ app.get('/', (req, res) => {
     }
 });
 
-app.get('/registeritem', (req,res) =>{
+app.get('/registeritem', (req,res) =>{ // upload picture left
     //query all fields
     var item_name = req.query.item_name;
     var location_lat = req.query.location_lat;
     var location_long = req.query.location_long;
     var location_desc = req.query.location_desc;
-    var category = req.query.category;
-    var color = req.query.color;
+    var category = req.query.category; 
     var description = req.query.description;
+    //color for 2nd table
+    var color1 = req.query.color1;
+    var color2 = req.query.color2;
     //variables for Items_found
     var type;
     var img_url;
-    var current_location = 'undefined'; // storage location aka locker or faculty. When it's still in finder's possession, it will be labeled as undefined.
-    var in_locker = 0; //0=false 1=true
-    var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
-    console.log(date_added);
+    var device_token;
+    // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
+    // console.log(date_added);
+    if(color1 == null){
+        console.log('color1 missing');
+        res.send('color1 is required');
+    }
     if(req.query.type == 'found' ){
         img_url = req.query.url;
         type = 0;
+        device_token = req.query.device_token;
     }
+
     //insert according to type
     if(req.query.type == 'lost'){
-        connection.query(
-            "INSERT INTO Items_lost(item_name,location_lat, location_long, location_desc, category, color, description) VALUES('"
-            +item_name+"',"+ location_lat+"," +location_long+",'" +location_desc+"','" +category+"','" +color+"','" +description+"')",
+        //var qrystr = "INSERT INTO 'Items_lost' SET item_name = '" + item_name + "', location_lat = " + location_lat + ", location_long = " + location_long + ", location_desc = '"+location_desc+"', description = '"+description+"', category = '" + category+"'";
+        var qrystr = "INSERT INTO 'Items_lost' SET item_name=?, location_lat=?, location_long=?, location_desc=?, description=?, category=?";
+        var qryarr = [item_name, location_lat, location_long, location_desc, description, category];
+        //var qrystr = "INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES ('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
+        //connection.query("INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES (?, ?, ?, ?, ? ,?)", [item_name, location_lat, location_long, location_desc, description, category],
+        connection.query(qrystr, qryarr,
             function(err,results){
-                if(err){
-                    console.log(err);
-                    res.send(err);
-                }else{
-                    console.log('inserted lost item');
-                    res.send('inserted lost item');
-                }
+                if(err) console.log(err);
+                getItemID(function(item_id){
+                    connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color1], function(err,results){
+                        if(err) console.log(err);
+                        console.log("color1 got called");
+                    })
+                    if(color2 != null){
+                        connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color2], function(err,results){
+                            if(err) console.log(err);
+                            console.log("color2 got called");
+                        })
+                    }
+                    res.send("Check everything");
+                })
+                // connection.query("SELECT MAX(item_id) AS max_item_id FROM `Item_lost`", function(err,results ){
+                //     if(err) console.log(err);
+                //     console.log(results);
+                //     console.log("lost id got called");
+                //     connection.query("INSERT INTO 'Item_lost_color' (item_id, color) VALUES ('" + results[0].max_item_id + "', '" + color1 +"')", function(err,result){
+                //         console.log("color got called");
+                //     })
+                //     if(color2!=null){
+                //         connection.query("INSERT INTO 'Item_lost_color' (item_id, color) VALUES (?, ?)", [results[0].max_item_id, color2], function(err,result){
+                //             console.log("color2 got called");
+                //         })
+                //     }
+                //     res.send("check logs and database");
+                // })
             }
         );
     }else if(req.query.type == 'found'){
         connection.query(
-            "INSERT INTO Items_found(item_name, location_lat, location_long, location_desc, category, color, description, type, image_url, current_location, in_locker, date_added) VALUES('"
-            + item_name +"'," + location_lat+"," +location_long+",'" +location_desc+"','" +category+"','" +color+"','" +description+"',0,'"+img_url+"','undefined',0,'"+date_added+"')",
+           "",
             function(err,results){
                 if(err){
                     console.log(err);
@@ -108,7 +140,6 @@ app.get('/registeritem', (req,res) =>{
     }else{
         res.send('type parameter error');
     }
-
 });
 
 app.get('/noti', (req, res) => {
@@ -184,13 +215,26 @@ app.post('/upload', function (request, response, next) {
 
 //***ADMINISTATION (backend only)***
 app.get('/db', (req, res) => { // used to check content of table
-    connection.query(
-        'SELECT * FROM `Persons`', // change table name to the one you want to check
-        function (err, results, fields) {
-            res.send(results); // results contains rows returned by server
-            //res.send(fields); // fields contains extra meta data about results, if available
-        }
-    );
+    // var id = [];
+    // console.log("1st id: "+ id[0]);
+    // connection.query(
+    //     "SELECT MAX(pid) AS max_pid FROM `Persons`", // change table name to the one you want to check
+    //     function (err, rows, fields) {
+    //         if(err) console.log(err);
+    //             console.log("query got executed");
+    //             console.log(rows);
+    //             id.push(rows[0].max_pid);
+    //             res.send("check logs"); // results contains rows returned by server
+    //             callback(null);
+    //         //res.send(fields); // fields contains extra meta data about results, if available
+    //     }
+    // );
+    // console.log("after query got executed");
+    // console.log("2nd id: " + id[0]);
+    getMaxPid(function(pid){
+        console.log(pid);
+        res.send("check logs!!!");
+    })
 });
 
 ///Item Listing System Methods
@@ -202,6 +246,7 @@ app.get('/item_reg', (req, res) => {
         res.json(results[0]);
     });
 });
+
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
     connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function(err, results) {
@@ -214,3 +259,17 @@ app.get('/item_claimed', (req, res) => {
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
 });
+
+function getMaxPid(callback){
+    connection.query("SELECT MAX(pid) AS max_pid FROM `Persons`", function(err, rows, fields){
+        if(err) console.log(err);
+        callback(rows[0].max_pid);
+    })
+}
+
+function getItemID(callback){
+    connection.query("SELECT MAX(item_id) AS max_item_id FROM 'Item_lost'", function(err, rows, fields){
+        if(err) console.log(err);
+        callback(rows[0].max_item_id);
+    })
+}
