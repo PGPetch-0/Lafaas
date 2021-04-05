@@ -171,7 +171,7 @@ app.post('/createuser', (req, res) => {
                     res.json({
                         code: 1,
                         message: 'Success',
-                        token: generateToken(user)
+                        token: generateToken(req.body.user)
                     })
                 });
         }
