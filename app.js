@@ -157,7 +157,7 @@ app.get('/noti', (req, res) => {
 });
 
 app.post('/createuser', (req, res) => {
-    connection.query("SELECT 1 FROM Persons WHERE username = '" + req.body.user + "' ORDER BY username LIMIT 1", function (err, results, fields) {
+    connection.query("SELECT * FROM Persons WHERE username = '" + req.body.user + "' ORDER BY username LIMIT 1", function (err, results, fields) {
         if (err) {
             console.log(err);
         } if (results.length > 0) {
@@ -166,7 +166,7 @@ app.post('/createuser', (req, res) => {
                 message: 'User already exists'
             })
         } else {
-            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('" + req.body.user + "', '" + req.body.pass + "', '" + req.body.email + "', '" + req.body.fname + "', '" + req.body.lname + "')",
+            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name, noti_token) VALUES ('" + req.body.user + "', '" + req.body.pass + "', '" + req.body.email + "', '" + req.body.fname + "', '" + req.body.lname + "', '" + req.body.noti_token + "')",
                 function (err, results) {
                     res.json({
                         code: 1,
