@@ -32,7 +32,7 @@ const upload = multer({
             cb(null, file.originalname); //use Date.now().toString() for unique file keys
         }
     })
-}).array('upload',1);
+}).array('upload', 1);
 
 let connection = mysql.createConnection({
     host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
@@ -42,30 +42,30 @@ let connection = mysql.createConnection({
     port: "25060"
 });
 
-function generateToken(user){
-    return jwt.sign({username: user}, token_secret);
-} 
+function generateToken(user) {
+    return jwt.sign({ username: user }, token_secret);
+}
 
 //****MAIN METHODS (frontend will call this) ****
 app.get('/', (req, res) => {
     //res.send(req.headers['x-forwarded-for'] + " eiei");
-    if(req.query.token!='undefined'){
-        jwt.verify(req.query.token,token_secret, (err, result) => { 
-            if (err){
-                return res.status(400).send('unauthenticated user'); 
-            } 
-            res.send('authenticated user: '+result['username']); 
-        }); 
+    if (req.query.token != 'undefined') {
+        jwt.verify(req.query.token, token_secret, (err, result) => {
+            if (err) {
+                return res.status(400).send('unauthenticated user');
+            }
+            res.send('authenticated user: ' + result['username']);
+        });
     }
 });
 
-app.get('/registeritem', (req,res) =>{ // upload picture left
+app.get('/registeritem', (req, res) => { // upload picture left
     //query all fields
     var item_name = req.query.item_name;
     var location_lat = req.query.location_lat;
     var location_long = req.query.location_long;
     var location_desc = req.query.location_desc;
-    var category = req.query.category; 
+    var category = req.query.category;
     var description = req.query.description;
     //color for 2nd table
     var color1 = req.query.color1;
@@ -76,34 +76,34 @@ app.get('/registeritem', (req,res) =>{ // upload picture left
     var device_token;
     // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
     // console.log(date_added);
-    if(color1 == null){
+    if (color1 == null) {
         console.log('color1 missing');
         res.send('color1 is required');
     }
-    if(req.query.type == 'found' ){
+    if (req.query.type == 'found') {
         img_url = req.query.url;
         type = 0;
         device_token = req.query.device_token;
     }
 
     //insert according to type
-    if(req.query.type == 'lost'){
+    if (req.query.type == 'lost') {
         //var qrystr = "INSERT INTO 'Items_lost' SET item_name = '" + item_name + "', location_lat = " + location_lat + ", location_long = " + location_long + ", location_desc = '"+location_desc+"', description = '"+description+"', category = '" + category+"'";
         var qrystr = "INSERT INTO 'Items_lost' SET item_name=?, location_lat=?, location_long=?, location_desc=?, description=?, category=?";
         var qryarr = [item_name, location_lat, location_long, location_desc, description, category];
         //var qrystr = "INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES ('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
         //connection.query("INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES (?, ?, ?, ?, ? ,?)", [item_name, location_lat, location_long, location_desc, description, category],
         connection.query(qrystr, qryarr,
-            function(err,results){
-                if(err) console.log(err);
-                getItemID(function(item_id){
-                    connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color1], function(err,results){
-                        if(err) console.log(err);
+            function (err, results) {
+                if (err) console.log(err);
+                getItemID(function (item_id) {
+                    connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color1], function (err, results) {
+                        if (err) console.log(err);
                         console.log("color1 got called");
                     })
-                    if(color2 != null){
-                        connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color2], function(err,results){
-                            if(err) console.log(err);
+                    if (color2 != null) {
+                        connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color2], function (err, results) {
+                            if (err) console.log(err);
                             console.log("color2 got called");
                         })
                     }
@@ -125,20 +125,20 @@ app.get('/registeritem', (req,res) =>{ // upload picture left
                 // })
             }
         );
-    }else if(req.query.type == 'found'){
+    } else if (req.query.type == 'found') {
         connection.query(
-           "",
-            function(err,results){
-                if(err){
+            "",
+            function (err, results) {
+                if (err) {
                     console.log(err);
                     res.send(err);
-                }else{
+                } else {
                     console.log('inserted found item');
                     res.send('inserted found item');
                 }
             }
         );
-    }else{
+    } else {
         res.send('type parameter error');
     }
 });
@@ -156,46 +156,49 @@ app.get('/noti', (req, res) => {
     res.send("Done");
 });
 
-app.get('/createuser', (req,res) =>{
-    //get user, pass, email, first, last
-    connection.query("SELECT 1 FROM Persons WHERE username = '"+req.query.user+"' ORDER BY username LIMIT 1", function (err, results, fields) {
+app.post('/createuser', (req, res) => {
+    connection.query("SELECT * FROM Persons WHERE username = '" + req.body.user + "' ORDER BY username LIMIT 1", function (err, results, fields) {
         if (err) {
             console.log(err);
-        }if (results.length>0) {
-            console.log(results);
-            console.log('fail');
-            res.send("user already exists");
+        } if (results.length > 0) {
+            res.json({
+                code: 0,
+                message: 'User already exists'
+            })
         } else {
-            console.log('insert');
-            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('"+req.query.user+"', '"+req.query.pass+"', '"+req.query.email+"', '"+req.query.fname+"', '"+req.query.lname+"')",
-            function(err,results){
-            res.send('successfully created user: '+req.query.user);
-            });
+            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name, noti_token) VALUES ('" + req.body.user + "', '" + req.body.pass + "', '" + req.body.email + "', '" + req.body.fname + "', '" + req.body.lname + "', '" + req.body.noti_token + "')",
+                function (err, results) {
+                    res.json({
+                        code: 1,
+                        message: 'Success',
+                        token: generateToken(req.body.user)
+                    })
+                });
         }
     });
 });
 
-app.post('/login', (req,res) =>{
+app.post('/login', (req, res) => {
     let user = req.body.user;
     let pass = req.body.pass;
-    let find = "SELECT username,password FROM Persons WHERE username='"+user+"'";
-    connection.query(find, function(err, results){
-        if(err){
+    let find = "SELECT username,password FROM Persons WHERE username='" + user + "'";
+    connection.query(find, function (err, results) {
+        if (err) {
             console.log(err);
             return;
         }
-        if(results.length === 0) {
+        if (results.length === 0) {
             res.json({
                 code: 0,
                 message: 'User not found'
             })
-        } else if(results[0].password === pass){
+        } else if (results[0].password === pass) {
             res.json({
                 code: 1,
                 message: 'Successful login',
                 token: generateToken(user)
             })
-        }else{
+        } else {
             res.json({
                 code: 2,
                 message: 'Unsuccessful login'
@@ -207,12 +210,12 @@ app.post('/login', (req,res) =>{
 //upload picture (need to be from input "file" in html)
 app.post('/upload', function (request, response, next) {
     upload(request, response, function (error) {
-      if (error) {
-        console.log(error);
-      }
-      console.log('File uploaded successfully.');
+        if (error) {
+            console.log(error);
+        }
+        console.log('File uploaded successfully.');
     });
-  });
+});
 
 //***ADMINISTATION (backend only)***
 app.get('/db', (req, res) => { // used to check content of table
@@ -232,7 +235,7 @@ app.get('/db', (req, res) => { // used to check content of table
     // );
     // console.log("after query got executed");
     // console.log("2nd id: " + id[0]);
-    getMaxPid(function(pid){
+    getMaxPid(function (pid) {
         console.log(pid);
         res.send("check logs!!!");
     })
@@ -242,7 +245,7 @@ app.get('/db', (req, res) => { // used to check content of table
 
 //Item Reg
 app.get('/item_reg', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url)) AS 'Registered' FROM Items_found WHERE type = 0 AND device_token != '" + req.query.token + "' ORDER BY date_added ASC", function(err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url)) AS 'Registered' FROM Items_found WHERE type = 0 AND device_token != '" + req.query.token + "' ORDER BY date_added ASC", function (err, results) {
         if (err) throw err;
         res.json(results[0]);
     });
@@ -250,28 +253,28 @@ app.get('/item_reg', (req, res) => {
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function(err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function (err, results) {
         if (err) throw err;
         res.json(results[0]);
     });
 });
 //get distance from item_lost to every item found
-app.get('/distanceCal',(req,res) => {
+app.get('/distanceCal', (req, res) => {
     const lost_id = req.query.lost_id
     connection.query(
         `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
         function (err, results, fields) {
             if (err) throw err;
             const lost_item = results[0]
-            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields)=>{
+            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields) => {
                 if (err) throw err;
-                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat),Number(lost_item.location_long));
+                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat), Number(lost_item.location_long));
                 var geopoint_found;
-                var res_msg = {"lost_id":Number(lost_id)};
-                results.forEach(function(result){
-                    console.log("item_id: "+result.item_id)
-                    geopoint_found = new GeoPoint(Number(result.location_lat),Number(result.location_long));
-                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true)*1000
+                var res_msg = { "lost_id": Number(lost_id) };
+                results.forEach(function (result) {
+                    console.log("item_id: " + result.item_id)
+                    geopoint_found = new GeoPoint(Number(result.location_lat), Number(result.location_long));
+                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true) * 1000
                     res_msg[`found_id${result.item_id}`] = distance;
                 })
                 res.send(res_msg);
@@ -279,29 +282,29 @@ app.get('/distanceCal',(req,res) => {
         });
 });
 //Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
-app.get('/color', (req,res) => {
+app.get('/color', (req, res) => {
     let color11 = req.query.color11;
     let color12 = req.query.color12;
     let color21 = req.query.color21;
     let color22 = req.query.color22;
-    if(typeof color12 == 'undefined' && typeof color22 == 'undefined'){
-        res.send(String(colordiff.compare(color11,color21)));
-    }else if(typeof color12=='undefined' || typeof color22=='undefined'){
-        if(typeof color12=='undefined'){
-            let v1=colordiff.compare(color11,color21);
-            let v2=colordiff.compare(color11,color22);
-            res.send (v1<v2 ? String(v1) : String(v2));
-        } else if(typeof color22=='undefined'){
-            let v1=colordiff.compare(color11,color21);
-            let v2=colordiff.compare(color12,color21);
-            res.send (v1<v2 ? String(v1) : String(v2));
-        } 
-    } else{
-        let v1 = colordiff.compare(color11,color21);
-        let v2 = colordiff.compare(color11,color22);
-        let v3 = colordiff.compare(color12,color21);
-        let v4 = colordiff.compare(color12,color22);
-        res.send(String(Math.min(v1,v2,v3,v4)));
+    if (typeof color12 == 'undefined' && typeof color22 == 'undefined') {
+        res.send(String(colordiff.compare(color11, color21)));
+    } else if (typeof color12 == 'undefined' || typeof color22 == 'undefined') {
+        if (typeof color12 == 'undefined') {
+            let v1 = colordiff.compare(color11, color21);
+            let v2 = colordiff.compare(color11, color22);
+            res.send(v1 < v2 ? String(v1) : String(v2));
+        } else if (typeof color22 == 'undefined') {
+            let v1 = colordiff.compare(color11, color21);
+            let v2 = colordiff.compare(color12, color21);
+            res.send(v1 < v2 ? String(v1) : String(v2));
+        }
+    } else {
+        let v1 = colordiff.compare(color11, color21);
+        let v2 = colordiff.compare(color11, color22);
+        let v3 = colordiff.compare(color12, color21);
+        let v4 = colordiff.compare(color12, color22);
+        res.send(String(Math.min(v1, v2, v3, v4)));
     }
 });
 
@@ -318,16 +321,16 @@ http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
 });
 
-function getMaxPid(callback){
-    connection.query("SELECT MAX(pid) AS max_pid FROM `Persons`", function(err, rows, fields){
-        if(err) console.log(err);
+function getMaxPid(callback) {
+    connection.query("SELECT MAX(pid) AS max_pid FROM `Persons`", function (err, rows, fields) {
+        if (err) console.log(err);
         callback(rows[0].max_pid);
     })
 }
 
-function getItemID(callback){
-    connection.query("SELECT MAX(item_id) AS max_item_id FROM 'Item_lost'", function(err, rows, fields){
-        if(err) console.log(err);
+function getItemID(callback) {
+    connection.query("SELECT MAX(item_id) AS max_item_id FROM 'Item_lost'", function (err, rows, fields) {
+        if (err) console.log(err);
         callback(rows[0].max_item_id);
     })
 }
