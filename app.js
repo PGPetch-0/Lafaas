@@ -256,7 +256,7 @@ app.get('/item_claimed', (req, res) => {
     });
 });
 //get distance from item_lost to every item found
-app.get('/distanceCal/',(req,res) => {
+app.get('/distanceCal',(req,res) => {
     const lost_id = req.query.lost_id
     connection.query(
         `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
@@ -304,6 +304,11 @@ app.get('/color', (req,res) => {
         res.send(String(Math.min(v1,v2,v3,v4)));
     }
 });
+
+app.get('/msgHardware',(req,res)=>{
+    const message = req.body
+    res.send(message)
+})
 
 
 
