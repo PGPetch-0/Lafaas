@@ -156,20 +156,23 @@ app.get('/noti', (req, res) => {
     res.send("Done");
 });
 
-app.get('/createuser', (req,res) =>{
-    //get user, pass, email, first, last
-    connection.query("SELECT 1 FROM Persons WHERE username = '"+req.query.user+"' ORDER BY username LIMIT 1", function (err, results, fields) {
+app.post('/createuser', (req,res) =>{
+    connection.query("SELECT 1 FROM Persons WHERE username = '"+req.body.user+"' ORDER BY username LIMIT 1", function (err, results, fields) {
         if (err) {
             console.log(err);
         }if (results.length>0) {
-            console.log(results);
-            console.log('fail');
-            res.send("user already exists");
+            res.json({
+                code: 0,
+                message: 'User already exists'
+            })
         } else {
-            console.log('insert');
-            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('"+req.query.user+"', '"+req.query.pass+"', '"+req.query.email+"', '"+req.query.fname+"', '"+req.query.lname+"')",
+            connection.query("INSERT INTO Persons(username,password,email,f_name,l_name) VALUES ('"+req.body.user+"', '"+req.body.pass+"', '"+req.body.email+"', '"+req.body.fname+"', '"+req.body.lname+"')",
             function(err,results){
-            res.send('successfully created user: '+req.query.user);
+                res.json({
+                code: 1,
+                message: 'Success',
+                token: generateToken(user)
+            })
             });
         }
     });
