@@ -16,7 +16,7 @@ const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
 //some variable setups
 app.use(bodyParser.json());
-
+app.use(require('express').urlencoded());
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
@@ -305,10 +305,12 @@ app.get('/color', (req,res) => {
     }
 });
 
-app.get('/msgHardware',(req,res)=>{
+app.post('/msgHardware',(req,res)=>{
     const message = req.body
+    console.log(message)
     res.send(message)
 })
+
 
 
 
