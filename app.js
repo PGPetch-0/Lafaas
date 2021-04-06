@@ -14,6 +14,9 @@ const { query } = require('express');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
+const { count } = require('console');
+const { TemporaryCredentials } = require('aws-sdk');
+
 //some variable setups
 app.use(bodyParser.json());
 app.use(require('express').urlencoded());
@@ -259,17 +262,24 @@ app.get('/item_claimed', (req, res) => {
     });
 });
 
-//Category matching system
-app.get('/matchcat', (req, res) => {
+//Matching system
+app.get('/match', (req, res) => {
     var losts = []
     var founds = []
 
     function appendItems(arr, items) {
-        //arr.push(items);
         arr = items.map(item => Object.values(item)[0]);
-        
-
         console.log(arr); //not mandatory
+        return arr;
+    }
+
+    async function executeMatching(color11,color12,type,results){
+        let arr = appendItems(type,results);
+        let colorCalculated = await getColorRes(arr,color11,color12);
+        //criteria for color difference is set to <= 40 but can be altered later on
+        let resultArr = colorCalculated.filter(item => item.colorDiff <= 40);
+        console.log(resultArr); 
+        return resultArr; 
     }
 
     if (req.query.type == 'found') { //condition1 = item found registered => generate notification
@@ -278,12 +288,9 @@ app.get('/matchcat', (req, res) => {
             if (err) {
                 throw err;
             } else {
-                //console.log(results)
-                
-                appendItems(losts, results);
+                executeMatching(req.query.color11,req.query.color12,losts,results);
             }
         });
-        
     }
     else if (req.query.type == 'lost') { //condition2 = item lost registered => query to show potential matches
         //y = registered lost item's category
@@ -291,11 +298,48 @@ app.get('/matchcat', (req, res) => {
             if (err) {
                 throw err;
             } else {
-                appendItems(founds, results);
+                executeMatching(req.query.color11,req.query.color12,founds,results);
             }
         });
     }
 });
+
+//Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
+function colorDifference(color11,color12,color21,color22){
+    if (typeof color12 == 'undefined' && typeof color22 == 'undefined') {
+        return(colordiff.compare(color11, color21));
+    } else if (typeof color12 == 'undefined' || typeof color22 == 'undefined') {
+        if (typeof color12 == 'undefined') {
+            let v1 = colordiff.compare(color11, color21);
+            let v2 = colordiff.compare(color11, color22);
+            return(v1 < v2 ? v1 : v2);
+        } else if (typeof color22 == 'undefined') {
+            let v1 = colordiff.compare(color11, color21);
+            let v2 = colordiff.compare(color12, color21);
+            return(v1 < v2 ? v1 : v2);
+        }
+    } else {
+        let v1 = colordiff.compare(color11, color21);
+        let v2 = colordiff.compare(color11, color22);
+        let v3 = colordiff.compare(color12, color21);
+        let v4 = colordiff.compare(color12, color22);
+        return(Math.min(v1, v2, v3, v4));
+    }
+}
+
+async function getColorRes(arr,color11,color12) {
+    arr.forEach((item) => {
+        let colors = [];
+            arr.forEach((item2) => {
+                if(item2.item_id == item.item_id)
+                    colors.push(item2.color);
+            });
+        let diff = colorDifference(color11,color12,colors[0],colors[1]);
+        Object.assign(item, {'colorDiff':diff});
+    });
+    console.log(arr);
+    return arr;
+}
 
 //get distance from item_lost to every item found
 app.get('/distanceCal', (req, res) => {
@@ -320,40 +364,13 @@ app.get('/distanceCal', (req, res) => {
             })
         });
 });
-//Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
-app.get('/color', (req, res) => {
-    let color11 = req.query.color11;
-    let color12 = req.query.color12;
-    let color21 = req.query.color21;
-    let color22 = req.query.color22;
-    if (typeof color12 == 'undefined' && typeof color22 == 'undefined') {
-        res.send(String(colordiff.compare(color11, color21)));
-    } else if (typeof color12 == 'undefined' || typeof color22 == 'undefined') {
-        if (typeof color12 == 'undefined') {
-            let v1 = colordiff.compare(color11, color21);
-            let v2 = colordiff.compare(color11, color22);
-            res.send(v1 < v2 ? String(v1) : String(v2));
-        } else if (typeof color22 == 'undefined') {
-            let v1 = colordiff.compare(color11, color21);
-            let v2 = colordiff.compare(color12, color21);
-            res.send(v1 < v2 ? String(v1) : String(v2));
-        }
-    } else {
-        let v1 = colordiff.compare(color11, color21);
-        let v2 = colordiff.compare(color11, color22);
-        let v3 = colordiff.compare(color12, color21);
-        let v4 = colordiff.compare(color12, color22);
-        res.send(String(Math.min(v1, v2, v3, v4)));
-    }
-});
+
 
 app.post('/msgHardware',(req,res)=>{
     const message = req.body
     console.log(message)
     res.send(message)
 })
-
-
 
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
