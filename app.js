@@ -258,6 +258,45 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
+
+//Category matching system
+app.get('/matchcat', (req, res) => {
+    var losts = []
+    var founds = []
+
+    function appendItems(arr, items) {
+        //arr.push(items);
+        arr = items.map(item => Object.values(item)[0]);
+        
+
+        console.log(arr); //not mandatory
+    }
+
+    if (req.query.type == 'found') { //condition1 = item found registered => generate notification
+        //x = registered found item's category
+        connection.query("SELECT (JSON_OBJECT('name', Items_lost.item_name, 'item_id', Items_lost.item_id, 'latitude', Items_lost.location_lat, 'longitude', Items_lost.location_long, 'location', Items_lost.location_desc, 'description', Items_lost.description, 'color', Items_lost_color.color)) FROM Items_lost, Items_lost_color WHERE category=? AND Items_lost.item_id = Items_lost_color.item_id", [req.query.category], function(err, results) {
+            if (err) {
+                throw err;
+            } else {
+                //console.log(results)
+                
+                appendItems(losts, results);
+            }
+        });
+        
+    }
+    else if (req.query.type == 'lost') { //condition2 = item lost registered => query to show potential matches
+        //y = registered lost item's category
+        connection.query("SELECT (JSON_OBJECT('name', Items_found.item_name, 'item_id', Items_found.item_id, 'latitude', Items_found.location_lat, 'longitude', Items_found.location_long, 'location', Items_found.location_desc, 'description', Items_found.description, 'color', Items_found_color.color)) FROM Items_found, Items_found_color WHERE category=? AND Items_found.item_id = Items_found_color.item_id", [req.query.category], function(err, results) {
+            if (err) {
+                throw err;
+            } else {
+                appendItems(founds, results);
+            }
+        });
+    }
+});
+
 //get distance from item_lost to every item found
 app.get('/distanceCal', (req, res) => {
     const lost_id = req.query.lost_id
