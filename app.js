@@ -17,6 +17,7 @@ const GeoPoint = require('geopoint');
 const { count } = require('console');
 const { TemporaryCredentials } = require('aws-sdk');
 
+
 //some variable setups
 app.use(bodyParser.json());
 app.use(require('express').urlencoded());
@@ -262,7 +263,7 @@ app.get('/item_claimed', (req, res) => {
     });
 });
 
-//Matching system
+//Matching system, req with (category, type, color11, color12(optional), item_id(for case lost))
 app.get('/match', (req, res) => {
     var losts = []
     var founds = []
@@ -278,7 +279,7 @@ app.get('/match', (req, res) => {
         let colorCalculated = await getColorRes(arr,color11,color12);
         //criteria for color difference is set to <= 40 but can be altered later on
         let resultArr = colorCalculated.filter(item => item.colorDiff <= 40);
-        console.log(resultArr); 
+        console.log("filtered by color arr:", resultArr); 
         return resultArr; 
     }
 
@@ -298,7 +299,11 @@ app.get('/match', (req, res) => {
             if (err) {
                 throw err;
             } else {
-                executeMatching(req.query.color11,req.query.color12,founds,results);
+                executeMatching(req.query.color11,req.query.color12,founds,results).then(async (filteredArr) =>{
+                    let sortedResult = await sortByDistance(req.query.item_id,filteredArr);
+                    console.log("final matching result for case lost: \n",sortedResult)
+                    res.send(sortedResult)
+                })
             }
         });
     }
@@ -342,28 +347,28 @@ async function getColorRes(arr,color11,color12) {
 }
 
 //get distance from item_lost to every item found
-app.get('/distanceCal', (req, res) => {
-    const lost_id = req.query.lost_id
-    connection.query(
-        `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
-        function (err, results, fields) {
-            if (err) throw err;
-            const lost_item = results[0]
-            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields) => {
-                if (err) throw err;
-                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat), Number(lost_item.location_long));
-                var geopoint_found;
-                var res_msg = { "lost_id": Number(lost_id) };
-                results.forEach(function (result) {
-                    console.log("item_id: " + result.item_id)
-                    geopoint_found = new GeoPoint(Number(result.location_lat), Number(result.location_long));
-                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true) * 1000
-                    res_msg[`found_id${result.item_id}`] = distance;
-                })
-                res.send(res_msg);
-            })
-        });
-});
+async function distanceCal(lost_id,arr){ 
+    console.log(arr)
+    const lostQueryPromise = connection.promise().query(`SELECT * FROM Items_lost WHERE item_id=${lost_id}`);
+    const [lost_items,lostfields] = await lostQueryPromise;
+    const geopoint_lost = new GeoPoint(Number(lost_items[0].location_lat),Number(lost_items[0].location_long));
+    var resultArr =[];
+    arr.forEach(function(item){
+        let geopoint_found = new GeoPoint(Number(item.latitude),Number(item.longitude)); //attribute name for lat and long are changed here, check with  
+        let distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true)*1000;
+        let found_item_with_distance = {...item, distance}
+        resultArr = [...resultArr, found_item_with_distance]
+    })
+
+    return resultArr
+}
+
+async function sortByDistance(lost_id,arr){
+    const distancefromLost = await distanceCal(lost_id,arr)
+    distancefromLost.sort((a,b)=> a.distance-b.distance)
+    console.log(distancefromLost)
+    return distancefromLost
+}
 
 
 app.post('/msgHardware',(req,res)=>{
