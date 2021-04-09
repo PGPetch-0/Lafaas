@@ -14,6 +14,10 @@ const { query } = require('express');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
+const { count } = require('console');
+const { TemporaryCredentials } = require('aws-sdk');
+
+
 //some variable setups
 app.use(bodyParser.json());
 app.use(require('express').urlencoded());
@@ -265,63 +269,120 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
-//get distance from item_lost to every item found
-app.get('/distanceCal', (req, res) => {
-    const lost_id = req.query.lost_id
-    connection.query(
-        `SELECT location_lat,location_long FROM Items_lost WHERE item_id=${lost_id}`, // change table name to the one you want to check
-        function (err, results, fields) {
-            if (err) throw err;
-            const lost_item = results[0]
-            connection.query('SELECT item_id,location_lat,location_long FROM Items_found', (err, results, fields) => {
-                if (err) throw err;
-                var geopoint_lost = new GeoPoint(Number(lost_item.location_lat), Number(lost_item.location_long));
-                var geopoint_found;
-                var res_msg = { "lost_id": Number(lost_id) };
-                results.forEach(function (result) {
-                    console.log("item_id: " + result.item_id)
-                    geopoint_found = new GeoPoint(Number(result.location_lat), Number(result.location_long));
-                    distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true) * 1000
-                    res_msg[`found_id${result.item_id}`] = distance;
-                })
-                res.send(res_msg);
-            })
+
+//Matching system, req with (category, type, color11, color12(optional), item_id(for case lost))
+app.get('/match', (req, res) => {
+    var losts = []
+    var founds = []
+
+    function appendItems(arr, items) {
+        arr = items.map(item => Object.values(item)[0]);
+        console.log(arr); //not mandatory
+        return arr;
+    }
+
+    async function executeMatching(color11,color12,type,results){
+        let arr = appendItems(type,results);
+        let colorCalculated = await getColorRes(arr,color11,color12);
+        //criteria for color difference is set to <= 40 but can be altered later on
+        let resultArr = colorCalculated.filter(item => item.colorDiff <= 40);
+        console.log("filtered by color arr:", resultArr); 
+        return resultArr; 
+    }
+
+    if (req.query.type == 'found') { //condition1 = item found registered => generate notification
+        //x = registered found item's category
+        connection.query("SELECT (JSON_OBJECT('name', Items_lost.item_name, 'item_id', Items_lost.item_id, 'latitude', Items_lost.location_lat, 'longitude', Items_lost.location_long, 'location', Items_lost.location_desc, 'description', Items_lost.description, 'color', Items_lost_color.color)) FROM Items_lost, Items_lost_color WHERE category=? AND Items_lost.item_id = Items_lost_color.item_id", [req.query.category], function(err, results) {
+            if (err) {
+                throw err;
+            } else {
+                executeMatching(req.query.color11,req.query.color12,losts,results);
+            }
         });
+    }
+    else if (req.query.type == 'lost') { //condition2 = item lost registered => query to show potential matches
+        //y = registered lost item's category
+        connection.query("SELECT (JSON_OBJECT('name', Items_found.item_name, 'item_id', Items_found.item_id, 'latitude', Items_found.location_lat, 'longitude', Items_found.location_long, 'location', Items_found.location_desc, 'description', Items_found.description, 'color', Items_found_color.color)) FROM Items_found, Items_found_color WHERE category=? AND Items_found.item_id = Items_found_color.item_id", [req.query.category], function(err, results) {
+            if (err) {
+                throw err;
+            } else {
+                executeMatching(req.query.color11,req.query.color12,founds,results).then(async (filteredArr) =>{
+                    let sortedResult = await sortByDistance(req.query.item_id,filteredArr);
+                    console.log("final matching result for case lost: \n",sortedResult)
+                    res.send(sortedResult)
+                })
+            }
+        });
+    }
 });
+
 //Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
-app.get('/color', (req, res) => {
-    let color11 = req.query.color11;
-    let color12 = req.query.color12;
-    let color21 = req.query.color21;
-    let color22 = req.query.color22;
+function colorDifference(color11,color12,color21,color22){
     if (typeof color12 == 'undefined' && typeof color22 == 'undefined') {
-        res.send(String(colordiff.compare(color11, color21)));
+        return(colordiff.compare(color11, color21));
     } else if (typeof color12 == 'undefined' || typeof color22 == 'undefined') {
         if (typeof color12 == 'undefined') {
             let v1 = colordiff.compare(color11, color21);
             let v2 = colordiff.compare(color11, color22);
-            res.send(v1 < v2 ? String(v1) : String(v2));
+            return(v1 < v2 ? v1 : v2);
         } else if (typeof color22 == 'undefined') {
             let v1 = colordiff.compare(color11, color21);
             let v2 = colordiff.compare(color12, color21);
-            res.send(v1 < v2 ? String(v1) : String(v2));
+            return(v1 < v2 ? v1 : v2);
         }
     } else {
         let v1 = colordiff.compare(color11, color21);
         let v2 = colordiff.compare(color11, color22);
         let v3 = colordiff.compare(color12, color21);
         let v4 = colordiff.compare(color12, color22);
-        res.send(String(Math.min(v1, v2, v3, v4)));
+        return(Math.min(v1, v2, v3, v4));
     }
-});
+}
+
+async function getColorRes(arr,color11,color12) {
+    arr.forEach((item) => {
+        let colors = [];
+            arr.forEach((item2) => {
+                if(item2.item_id == item.item_id)
+                    colors.push(item2.color);
+            });
+        let diff = colorDifference(color11,color12,colors[0],colors[1]);
+        Object.assign(item, {'colorDiff':diff});
+    });
+    console.log(arr);
+    return arr;
+}
+
+//get distance from item_lost to every item found
+async function distanceCal(lost_id,arr){ 
+    console.log(arr)
+    const lostQueryPromise = connection.promise().query(`SELECT * FROM Items_lost WHERE item_id=${lost_id}`);
+    const [lost_items,lostfields] = await lostQueryPromise;
+    const geopoint_lost = new GeoPoint(Number(lost_items[0].location_lat),Number(lost_items[0].location_long));
+    var resultArr =[];
+    arr.forEach(function(item){
+        let geopoint_found = new GeoPoint(Number(item.latitude),Number(item.longitude)); //attribute name for lat and long are changed here, check with  
+        let distance = geopoint_lost.distanceTo(geopoint_found, inKilometers = true)*1000;
+        let found_item_with_distance = {...item, distance}
+        resultArr = [...resultArr, found_item_with_distance]
+    })
+
+    return resultArr
+}
+
+async function sortByDistance(lost_id,arr){
+    const distancefromLost = await distanceCal(lost_id,arr)
+    distancefromLost.sort((a,b)=> a.distance-b.distance)
+    console.log(distancefromLost)
+    return distancefromLost
+}
+
 
 app.post('/msgHardware',(req,res)=>{
     const message = req.body
     console.log(message)
     res.send(message)
 })
-
-
 
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
