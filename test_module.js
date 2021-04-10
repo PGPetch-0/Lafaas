@@ -147,5 +147,36 @@ async function StringSimilarity(item_id,type,itemsArr){
     })
     return itemsArr
 }
-StringSimilarity(11,'found',testArr).then(result=>console.log(result))
+
+async function requestQRdata(itemID,personID,type,item_current_location){
+  const moduleIDAndToken = await getData(itemID,type)
+  const module_ID = moduleIDAndToken['ModuleID'];
+  const token = moduleIDAndToken['device_token'];
+  const timestamp = Date.now();
+  scanInterval = setTimeout(token => {
+    //sendNoti(token)
+    console.log("Timer is end")
+  }, 1000);
+  const QRdata = {"moduleID":module_ID,"itemID":itemID,"location":item_current_location,"notiToken":token,"TimeStamp":timestamp}
+  return [QRdata,scanInterval]
+}
+//getModuleID and device_token
+async function getData(itemID,type){
+  if (type === 'found'){
+    const moduleID = "ENG101" //placehold for test require query and module selection
+    const sql = `select device_token from Items_found where item_id=${itemID}`  
+    const queryPromise = connection.promise().query(sql)
+    const [items,fields] = await queryPromise
+    const ret = {"ModuleID": moduleID, "device_token": items[0].device_token}
+    return ret
+  }
+} 
+
+(async()=> {
+  const [result,scanInterval] = await requestQRdata(1,1,'found','ENGINEER');
+  console.log(result)
+  console.log(scanInterval)
+})()
+
+//StringSimilarity(1,'found',testArr).then(result=>console.log(result))
 
