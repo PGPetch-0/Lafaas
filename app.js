@@ -372,58 +372,63 @@ async function sortByDistance(lost_id,arr){
     return distancefromLost
 }
 
-
-app.post('/msgHardware',(req,res)=>{
+app.post('/msgHardware', (req, res) => {
     const message = req.body
     console.log(message)
     res.set_head
     res.send(message)
 })
-var scanInterval={};
-app.get('/requestQRdata',(req,res)=>{
-    const item_ID = req.query.item_ID;
-    const person_ID = req.query.person_ID;
+
+let scanInterval = {};
+
+app.get('/requestQRdata', (req, res) => {
+    const item_id = req.query.item_id;
+    const device_token = req.query.device_token;
     const type = req.query.type;
     const item_current_location = req.query.item_current_location;
-    requestQRdata(item_ID,person_ID,type,item_current_location).then(QRdata=>{
-        res.on('finish',()=>{
-            scanInterval.noti_token = setTimeout(token => {
-                //sendNoti(token)
-                console.log(`Timer is end`)
-              }, 10000);
-        })
-        res.json(QRdata);
-    })
-})
-app.get('/requestOpenModule',(req,res)=>{
-    if(typeof scanInterval != 'undefined'){
-        clearTimeout(scanInterval.noti_token)
-        res.send(`Timer is stop`)
-    }else{
-    res.send("Timer is not stop")
-    }
-})
 
-async function requestQRdata(itemID,personID,type,item_current_location){
-    const moduleIDAndToken = await getData(itemID,type)
-    const module_ID = moduleIDAndToken['ModuleID'];
-    const token = moduleIDAndToken['device_token'];
+    res.on('finish', () => {
+        const timer = setTimeout(() => console.log('Timer is end'), 10000);
+        scanInterval[device_token] = timer;
+    });
+
+    const module_ID = 'ENG101'
     const timestamp = Date.now();
-    const QRdata = {"moduleID":module_ID,"itemID":itemID,"location":item_current_location,"notiToken":token,"TimeStamp":timestamp}
-    return QRdata
-  }
+    const QRdata = { "moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
 
-async function getData(itemID,type){
-    if (type === 'found'){
-      const moduleID = "ENG101" //placehold for test require query and module selection
-      const sql = `select device_token from Items_found where item_id=${itemID}`  
-      const queryPromise = connection.promise().query(sql)
-      const [items,fields] = await queryPromise
-      const ret = {"ModuleID": moduleID, "device_token": items[0].device_token}
-      return ret
+    res.json(QRdata);
+})
+
+app.get('/requestOpenModule', (req, res) => {
+    const token = req.query.token;
+    if (typeof scanInterval != 'undefined') {
+        clearTimeout(scanInterval[token]);
+        delete scanInterval[token];
+        res.send('Timer is stop' + token);
+    } else {
+        res.send('Timer is not stop');
     }
-  } 
+})
 
+/*
+async function requestQRdata(itemID, personID, type, item_current_location) {
+    const module_ID = 'ENG101'
+    const timestamp = Date.now();
+    const QRdata = { "moduleID": module_ID, "itemID": itemID, "location": item_current_location, "deviceToken": token, "TimeStamp": timestamp }
+    return QRdata;
+}
+
+async function getData(itemID, type) {
+    if (type === 'found') {
+        const moduleID = "ENG101" //placehold for test require query and module selection
+        const sql = `select device_token from Items_found where item_id=${itemID}`
+        const queryPromise = connection.promise().query(sql)
+        const [items, fields] = await queryPromise
+        const ret = { "ModuleID": moduleID, "device_token": items[0].device_token }
+        return ret
+    }
+}
+*/
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
