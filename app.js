@@ -9,18 +9,13 @@ const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const jwt = require('jsonwebtoken');
-const { callbackify } = require('util');
-const { query } = require('express');
-const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
-const { count } = require('console');
-const { TemporaryCredentials } = require('aws-sdk');
-
+const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 
 //some variable setups
 app.use(bodyParser.json());
-app.use(require('express').urlencoded());
+app.use(bodyParser.urlencoded( {extended: true} ));
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
