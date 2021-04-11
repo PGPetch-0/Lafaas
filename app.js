@@ -9,18 +9,13 @@ const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const jwt = require('jsonwebtoken');
-const { callbackify } = require('util');
-const { query } = require('express');
-const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
-const { count } = require('console');
-const { TemporaryCredentials } = require('aws-sdk');
-
+const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
 
 //some variable setups
 app.use(bodyParser.json());
-app.use(require('express').urlencoded());
+app.use(bodyParser.urlencoded( {extended: true} ));
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
@@ -341,13 +336,63 @@ async function sortByDistance(lost_id,arr){
     return distancefromLost
 }
 
-
-app.post('/msgHardware',(req,res)=>{
+app.post('/msgHardware', (req, res) => {
     const message = req.body
     console.log(message)
+    res.set_head
     res.send(message)
 })
 
+let scanInterval = {};
+
+app.get('/requestQRdata', (req, res) => {
+    const item_id = req.query.item_id;
+    const device_token = req.query.device_token;
+    const type = req.query.type;
+    const item_current_location = req.query.item_current_location;
+
+    res.on('finish', () => {
+        const timer = setTimeout(() => console.log('Timer is end'), 10000);
+        scanInterval[device_token] = timer;
+    });
+
+    const module_ID = 'ENG101'
+    const timestamp = Date.now();
+    const QRdata = { "moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
+
+    res.json(QRdata);
+})
+
+app.get('/requestOpenModule', (req, res) => {
+    const token = req.query.token;
+    if (typeof scanInterval != 'undefined') {
+        clearTimeout(scanInterval[token]);
+        delete scanInterval[token];
+        res.send('Timer is stop' + token);
+    } else {
+        res.send('Timer is not stop');
+    }
+})
+
+/*
+async function requestQRdata(itemID, personID, type, item_current_location) {
+    const module_ID = 'ENG101'
+    const timestamp = Date.now();
+    const QRdata = { "moduleID": module_ID, "itemID": itemID, "location": item_current_location, "deviceToken": token, "TimeStamp": timestamp }
+    return QRdata;
+}
+
+async function getData(itemID, type) {
+    if (type === 'found') {
+        const moduleID = "ENG101" //placehold for test require query and module selection
+        const sql = `select device_token from Items_found where item_id=${itemID}`
+        const queryPromise = connection.promise().query(sql)
+        const [items, fields] = await queryPromise
+        const ret = { "ModuleID": moduleID, "device_token": items[0].device_token }
+        return ret
+    }
+}
+*/
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
