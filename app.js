@@ -101,7 +101,10 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                             console.log("color2 got called");
                         })
                     }
-                    res.send("Check everything"); // need to redirect
+                    var str = "?category=" + category + "&type=" + req.body.type + "&color11=" + req.body.colors[0];
+                    if(colors.length>=2) str += "&color12=" + req.body.colors[1];
+                    if(req.body.type=="lost") str += "&item_id=" + item_id;
+                    res.redirect("/match"+str);
                 })
             }
         );
@@ -120,13 +123,19 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                             console.log("color got called: " +i);
                         })
                     }
-                    res.send("Check everything"); // need to redirect
+                    var str = "?category=" + category + "&type=" + req.body.type + "&color11=" + req.body.colors[0];
+                    if(colors.length>=2) str += "&color12=" + req.body.colors[1];
+                    if(req.body.type=="lost") str += "&item_id=" + item_id;
+                    res.redirect("/match"+str);
                 })
+                
             }
         );
     }else{
         res.send('type parameter error');
     }
+
+    //redirect to match
 });
 
 app.get('/noti', (req, res) => {
