@@ -63,95 +63,75 @@ app.get('/', (req, res) => {
     }
 });
 
-app.get('/registeritem', (req, res) => { // upload picture left
+app.post('/registeritem', (req,res) =>{ // upload picture left
     //query all fields
-    var item_name = req.query.item_name;
-    var location_lat = req.query.location_lat;
-    var location_long = req.query.location_long;
-    var location_desc = req.query.location_desc;
-    var category = req.query.category;
-    var description = req.query.description;
+    var item_name = req.body.item_name;
+    var location_lat = req.body.location_lat;
+    var location_long = req.body.location_long;
+    var location_desc = req.body.location_desc;
+    var category = req.body.category; 
+    var description = req.body.description;
     //color for 2nd table
-    var color1 = req.query.color1;
-    var color2 = req.query.color2;
+    var colors = req.body.color; // needs to be array of color
     //variables for Items_found
     var type;
     var img_url;
     var device_token;
     // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
     // console.log(date_added);
-    if (color1 == null) {
-        console.log('color1 missing');
-        res.send('color1 is required');
+    if(colors.length == 0){
+        res.send('color missing');
     }
-    if (req.query.type == 'found') {
-        img_url = req.query.url;
-        type = 0;
-        device_token = req.query.device_token;
+    if(req.body.type == 'found' ){
+        img_url = req.body.url;
+        type = 0; //freshly registered item will always have type found. Cannot be reserved or claimed.
+        device_token = req.body.device_token;
     }
 
     //insert according to type
-    if (req.query.type == 'lost') {
-        //var qrystr = "INSERT INTO 'Items_lost' SET item_name = '" + item_name + "', location_lat = " + location_lat + ", location_long = " + location_long + ", location_desc = '"+location_desc+"', description = '"+description+"', category = '" + category+"'";
-        var qrystr = "INSERT INTO 'Items_lost' SET item_name=?, location_lat=?, location_long=?, location_desc=?, description=?, category=?";
-        var qryarr = [item_name, location_lat, location_long, location_desc, description, category];
-        //var qrystr = "INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES ('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
-        //connection.query("INSERT INTO 'Items_lost' (item_name, location_lat, location_long, location_desc, description, category) VALUES (?, ?, ?, ?, ? ,?)", [item_name, location_lat, location_long, location_desc, description, category],
-        connection.query(qrystr, qryarr,
-            function (err, results) {
-                if (err) console.log(err);
-                getItemID(function (item_id) {
-                    connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color1], function (err, results) {
-                        if (err) console.log(err);
+    if(req.body.type == 'lost'){
+        if(color.length >2) res.send("There can be at most 2 colors!");
+        var qrystr = "INSERT INTO `Items_lost`(item_name, location_lat, location_long, location_desc, description, category) VALUES('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
+        connection.query(qrystr,
+            function(err,results){
+                if(err) console.log(err);
+                getItemLostID(function(item_id){
+                    connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[0]], function(err,results){
+                        if(err) console.log(err);
                         console.log("color1 got called");
                     })
-                    if (color2 != null) {
-                        connection.query("INSERT INTO 'Items_lost_color' (item_id, color) VALUES (?, ?)", [item_id, color2], function (err, results) {
-                            if (err) console.log(err);
+                    if(colors.length==2){
+                        connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[1]], function(err,results){
+                            if(err) console.log(err);
                             console.log("color2 got called");
                         })
                     }
-                    res.send("Check everything");
+                    res.send("Check everything"); // need to redirect
                 })
-                // connection.query("SELECT MAX(item_id) AS max_item_id FROM `Item_lost`", function(err,results ){
-                //     if(err) console.log(err);
-                //     console.log(results);
-                //     console.log("lost id got called");
-                //     connection.query("INSERT INTO 'Item_lost_color' (item_id, color) VALUES ('" + results[0].max_item_id + "', '" + color1 +"')", function(err,result){
-                //         console.log("color got called");
-                //     })
-                //     if(color2!=null){
-                //         connection.query("INSERT INTO 'Item_lost_color' (item_id, color) VALUES (?, ?)", [results[0].max_item_id, color2], function(err,result){
-                //             console.log("color2 got called");
-                //         })
-                //     }
-                //     res.send("check logs and database");
-                // })
             }
         );
-    } else if (req.query.type == 'found') {
+    }else if(req.body.type == 'found'){
+        var qrystr2 = "INSERT INTO `Items_found`(item_name, location_lat, location_long, location_desc, description, category, type, image_url, device_token) VALUES (?,?,?,?,?,?,?,?,?)";
+        var qryarr = [item_name, location_lat, location_long, location_desc, description, category, 0, img_url, device_token];
         connection.query(
-            "",
-            function (err, results) {
-                if (err) {
-                    console.log(err);
-                    res.send(err);
-                } else {
-                    console.log('inserted found item');
-                    res.redirect('/match');
-                }
+           qrystr2, qryarr,
+            function(err,results){
+                if(err) console.log(err);
+                getItemFoundID(function(item_id){
+                    var i;
+                    for(i=0; i<colors.length; i++){
+                        connection.query("INSERT INTO `Items_found_color` (item_id, color) VALUES (?, ?)", [item_id, colors[i]], function(err,results){
+                            if(err) console.log(err);
+                            console.log("color got called: " +i);
+                        })
+                    }
+                    res.send("Check everything"); // need to redirect
+                })
             }
         );
-    } else {
+    }else{
         res.send('type parameter error');
     }
-});
-
-// match to be implemented
-app.get('/match', (req,res) => {
-
-    res.send('match got called');
-
 });
 
 app.get('/noti', (req, res) => {
@@ -230,22 +210,6 @@ app.post('/upload', function (request, response, next) {
 
 //***ADMINISTATION (backend only)***
 app.get('/db', (req, res) => { // used to check content of table
-    // var id = [];
-    // console.log("1st id: "+ id[0]);
-    // connection.query(
-    //     "SELECT MAX(pid) AS max_pid FROM `Persons`", // change table name to the one you want to check
-    //     function (err, rows, fields) {
-    //         if(err) console.log(err);
-    //             console.log("query got executed");
-    //             console.log(rows);
-    //             id.push(rows[0].max_pid);
-    //             res.send("check logs"); // results contains rows returned by server
-    //             callback(null);
-    //         //res.send(fields); // fields contains extra meta data about results, if available
-    //     }
-    // );
-    // console.log("after query got executed");
-    // console.log("2nd id: " + id[0]);
     getMaxPid(function (pid) {
         console.log(pid);
         res.send("check logs!!!");
@@ -396,8 +360,15 @@ function getMaxPid(callback) {
     })
 }
 
-function getItemID(callback) {
-    connection.query("SELECT MAX(item_id) AS max_item_id FROM 'Item_lost'", function (err, rows, fields) {
+function getItemLostID(callback) {
+    connection.query("SELECT MAX(item_id) AS max_item_id FROM `Items_lost`", function (err, rows, fields) {
+        if (err) console.log(err);
+        callback(rows[0].max_item_id);
+    })
+}
+
+function getItemFoundID(callback) {
+    connection.query("SELECT MAX(item_id) AS max_item_id FROM `Items_found`", function (err, rows, fields) {
         if (err) console.log(err);
         callback(rows[0].max_item_id);
     })
