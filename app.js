@@ -381,32 +381,98 @@ app.post('/msgHardware', (req, res) => {
 
 let scanInterval = {};
 
-app.get('/requestQRdata', (req, res) => {
+app.get('/requestQRdata', (req, res) => { //for frontend client
     const item_id = req.query.item_id;
     const device_token = req.query.device_token;
     const type = req.query.type;
     const item_current_location = req.query.item_current_location;
 
     res.on('finish', () => {
-        const timer = setTimeout(() => console.log('Timer is end'), 10000);
+        const timer = setTimeout(() =>{
+            console.log(`Timer is end ${device_token}`)
+            delete scanInterval[device_token]
+        }, 15000);
         scanInterval[device_token] = timer;
     });
 
-    const module_ID = 'ENG101'
+    const module_ID = 'ENG101' //getModuleID(item_current_location)
     const timestamp = Date.now();
-    const QRdata = { "moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
-
+    const QRdata = { "type": type,"moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
     res.json(QRdata);
 })
 
-app.get('/requestOpenModule', (req, res) => {
-    const token = req.query.token;
-    if (typeof scanInterval != 'undefined') {
-        clearTimeout(scanInterval[token]);
-        delete scanInterval[token];
-        res.send('Timer is stop' + token);
-    } else {
-        res.send('Timer is not stop');
+app.get('/informClient', (req, res) => { //for hardware
+    const token = req.query.token; //noti_token
+    const msgfromHardware = req.query.msg;
+    const module_id= req.query.module_id;
+    const type = req.query.type;
+    const today = new Date();
+    const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    switch (msgfromHardware) {
+        case `stopTimer`:
+            if (scanInterval[token]) { //timer is running
+                clearTimeout(scanInterval[token]); //stop then delete
+                delete scanInterval[token];
+                console.log('QRisValid: '+token)
+                if (type === 'found'){
+                    //noti user[token] `module: ${module_id} is opened`
+                    console.log('Open module ' + module_id)
+                    res.json({'openModule': module_id, 'type': type});
+                }
+                else if(type === 'lost'){
+                    //noti[token] 'scanFinger'
+                    res.json({'scanFingerprint': token, 'openModule': module_id, 'type': type })
+                }
+            } else { //timeout or invalid
+                //noti user[token] QrExpire
+                res.send('ExpireNotiSentTo: '+token);
+            }
+        break;
+        case 'WrongStation':
+                //noti user[token] WrongStation
+                res.send('WrongStationNotiSentTo: '+token) 
+        break;
+        case 'QrExpire':
+                //noti user[token] QrExpire
+                res.send('ExpireNotiSentTo: '+ token) 
+        break;
+        case 'moduleClosed':
+            if (type === 'found'){
+                //update vacancy
+                    // let sql = `INSERT INTO Stores `
+                    // connection.query()
+                //update store
+            }
+            if (type === 'lost'){
+                //update vacancy
+                    // let sql = `INSERT INTO Stores `
+                    // connection.query()
+                //update store
+                //change item type=> claimed
+            }
+            res.send('SuccessNotiSentTo: '+ token) // updated vacancy status
+        break;
+        case 'cancelClaim':
+                //change item type=> registered
+                res.send('ClaimCancelNotiSentTo: '+ token) 
+        break;
+        default:
+                res.send('Invalid Message')
+            break;
+    }
+    
+})
+
+app.post('/uploadFingerprint', (req,res)=>{
+    const fingerprint = req.post.fingerprint;
+    const module_id = req.post.module_id;
+    const type = req.post.type;
+    //upload fingerprint
+    const record= true; //success store fingerprint
+    //if(err) throw err
+    if (record){
+        console.log('Open module ' + module_id)
+        res.json({'openModule': module_id, 'type': type});
     }
 })
 
