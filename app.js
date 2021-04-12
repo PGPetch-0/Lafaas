@@ -364,7 +364,7 @@ app.get('/requestQRdata', (req, res) => { //for frontend client
         const timer = setTimeout(() =>{
             console.log(`Timer is end ${device_token}`)
             delete scanInterval[device_token]
-        }, 15000);
+        }, 3600000);
         scanInterval[device_token] = timer;
     });
 
@@ -437,9 +437,9 @@ app.get('/informClient', (req, res) => { //for hardware
 })
 
 app.post('/uploadFingerprint', (req,res)=>{
-    const fingerprint = req.post.fingerprint;
-    const module_id = req.post.module_id;
-    const type = req.post.type;
+    const fingerprint = req.body.fingerprint;
+    const module_id = req.body.module_id;
+    const type = req.body.type;
     //upload fingerprint
     const record= true; //success store fingerprint
     //if(err) throw err
