@@ -238,51 +238,59 @@ app.get('/item_claimed', (req, res) => {
     });
 });
 
-//Matching system, req with (category, type, color11, color12(optional), item_id(for case lost))
-app.get('/match', (req, res) => {
-    var losts = []
-    var founds = []
-
-    function appendItems(arr, items) {
-        arr = items.map(item => Object.values(item)[0]);
-        console.log(arr); //not mandatory
-        return arr;
-    }
-
-    async function executeMatching(color11,color12,type,results){
-        let arr = appendItems(type,results);
-        let colorCalculated = await getColorRes(arr,color11,color12);
-        //criteria for color difference is set to <= 40 but can be altered later on
-        let resultArr = colorCalculated.filter(item => item.colorDiff <= 40);
-        console.log("filtered by color arr:", resultArr); 
-        return resultArr; 
-    }
-
-    if (req.query.type == 'found') { //condition1 = item found registered => generate notification
-        //x = registered found item's category
-        connection.query("SELECT (JSON_OBJECT('name', Items_lost.item_name, 'item_id', Items_lost.item_id, 'latitude', Items_lost.location_lat, 'longitude', Items_lost.location_long, 'location', Items_lost.location_desc, 'description', Items_lost.description, 'color', Items_lost_color.color)) FROM Items_lost, Items_lost_color WHERE category=? AND Items_lost.item_id = Items_lost_color.item_id", [req.query.category], function(err, results) {
-            if (err) {
-                throw err;
-            } else {
-                executeMatching(req.query.color11,req.query.color12,losts,results);
+//Matching, to be called by registerItem
+function match (item_id,type) {
+    let matchA = [];
+    let colorA = [];
+    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
+        if (err) {
+            throw err;
+        } else {
+            matchA = results.map(result => Object.values(result)[0]);
+            matchA.map(item => colorA.push(item.color))
+            matchA.map(item => item.color = colorA);
+            matchA.flat();
+            const seen = new Set();
+            const filteredMatchA = matchA.filter(el => {
+                const duplicate = seen.has(el.id);
+                seen.add(el.id);
+                return !duplicate;
+            })
+            switch (type) {
+                case 'found': {
+                    x = matchCat(filteredMatchA,'lost');
+                }
+                case 'lost': {
+                    x = matchCat(filteredMatchA,'found');
+                }
             }
-        });
-    }
-    else if (req.query.type == 'lost') { //condition2 = item lost registered => query to show potential matches
-        //y = registered lost item's category
-        connection.query("SELECT (JSON_OBJECT('name', Items_found.item_name, 'item_id', Items_found.item_id, 'latitude', Items_found.location_lat, 'longitude', Items_found.location_long, 'location', Items_found.location_desc, 'description', Items_found.description, 'color', Items_found_color.color)) FROM Items_found, Items_found_color WHERE category=? AND Items_found.item_id = Items_found_color.item_id", [req.query.category], function(err, results) {
-            if (err) {
-                throw err;
-            } else {
-                executeMatching(req.query.color11,req.query.color12,founds,results).then(async (filteredArr) =>{
-                    let sortedResult = await sortByDistance(req.query.item_id,filteredArr);
-                    console.log("final matching result for case lost: \n",sortedResult)
-                    res.send(sortedResult)
-                })
-            }
-        });
-    }
-});
+        }
+    });
+}
+
+function matchCat(matchA, type){
+    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".category=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", matchA[0].category, function(err, results) {
+        if (err) {
+            throw err;
+        } else {
+            let matchB = results.map(result => Object.values(result)[0]);
+            //console.log(matchB);
+            matchB.map(a => {
+                let colorTemp = [];
+                colorTemp.push(a.color);
+                a.color = colorTemp;
+            });
+            //console.log(matchB);
+            const arrayHashmap = matchB.reduce((obj, item) => {
+                obj[item.item_id] ? obj[item.item_id].color.push(...item.color) : (obj[item.item_id] = { ...item });
+                return obj;
+            }, {});
+            const mergedArray = Object.values(arrayHashmap);
+            //console.log(mergedArray);
+            return matchColor(matchA,mergedArray);
+        }
+    });
+}
 
 //Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
 function colorDifference(color11,color12,color21,color22){
