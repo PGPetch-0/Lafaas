@@ -390,7 +390,7 @@ app.get('/informClient', (req, res) => { //for hardware
                 if (type === 'found'){
                     //noti user[token] `module: ${module_id} is opened`
                     console.log('Open module ' + module_id)
-                    res.json({'openModule': module_id, 'type': type});
+                    res.json({'openModule': module_id, 'type': type, 'device_token': token});
                 }
                 else if(type === 'lost'){
                     //noti[token] 'scanFinger'
@@ -425,7 +425,7 @@ app.get('/informClient', (req, res) => { //for hardware
             }
             res.send('SuccessNotiSentTo: '+ token) // updated vacancy status
         break;
-        case 'cancelClaim':
+        case 'cancelClaim': //need fix wrong algo: client send this not hardware 
                 //change item type=> registered
                 res.send('ClaimCancelNotiSentTo: '+ token) 
         break;
@@ -440,12 +440,13 @@ app.post('/uploadFingerprint', (req,res)=>{
     const fingerprint = req.body.fingerprint;
     const module_id = req.body.module_id;
     const type = req.body.type;
+    const device_token = req.body.device_token;
     //upload fingerprint
     const record= true; //success store fingerprint
     //if(err) throw err
     if (record){
         console.log('Open module ' + module_id)
-        res.json({'openModule': module_id, 'type': type});
+        res.json({'openModule': module_id, 'type': type, 'device_token': device_token});
     }
 })
 
