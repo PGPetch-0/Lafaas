@@ -353,7 +353,13 @@ app.post('/msgHardware',(req,res)=>{
     res.send(message)
 })
 
-
+//Claims History
+app.get('/claimhist', (req, res) => {
+    connection.query(`SELECT JSON_ARRAYAGG(JSON_OBJECT(Items_lost.item_name, Claims.date_claimed, Persons.pid)) FROM Persons INNER JOIN Loses ON Loses.pid = Persons.pid INNER JOIN Items_lost on Items_lost.item_id = Loses.item_id INNER JOIN Claims on Claims.item_id = Items_lost.item_id`, 
+        function(err, results) {
+            if (err) throw err;
+    });
+});
 
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
