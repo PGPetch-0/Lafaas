@@ -292,6 +292,30 @@ function matchCat(matchA, type){
     });
 }
 
+function matchColor(a,b) {
+    //color ex.['ffffff','000000','7f7f7f']
+    console.log(b);
+    for(item of b) {
+        let bColor = item.color;
+        let tempArr = [];
+        for(color of a[0].color) {
+            bColor.map(c => {
+                let diff = colordiff.compare(color,c);
+                tempArr.push(diff);
+            })
+            console.log(tempArr);
+        }
+        let calcDiff = 0;
+        tempArr.map(eachdiff => {
+            calcDiff += eachdiff;
+        })
+        calcDiff = calcDiff/(tempArr.length*100);
+        Object.assign(item,{'colorDiff':calcDiff});
+        console.log(item);
+    }
+    b = b.filter(a => a.colorDiff < 0.5); //criteria is set to under 0.5
+}
+
 //Color difference; only color11 and color21 are mendatory. 11 means first color from first item and 21 is first color from second item.
 function colorDifference(color11,color12,color21,color22){
     if (typeof color12 == 'undefined' && typeof color22 == 'undefined') {

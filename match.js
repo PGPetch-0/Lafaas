@@ -98,20 +98,43 @@ function matchCat(matchA, type){
 
 function matchColor(a,b) {
     //color ex.['ffffff','000000','7f7f7f']
-    console.log(typeof b);
     console.log(b);
-    for(color of a[0].color) { //each color of input
-        for(item of b) { //each item being compared
-            let bColor = item.color; //array of colors of said item
-            let tempArr = [];
+    for(item of b) {
+        let bColor = item.color;
+        let tempArr = [];
+        for(color of a[0].color) {
             bColor.map(c => {
                 let diff = colordiff.compare(color,c);
                 tempArr.push(diff);
             })
-            Object.assign(item,{'colorDiff':tempArr});
-            console.log(item);
+            console.log(tempArr);
         }
+        let calcDiff = 0;
+        tempArr.map(eachdiff => {
+            calcDiff += eachdiff;
+        })
+        calcDiff = calcDiff/(tempArr.length*100);
+        Object.assign(item,{'colorDiff':calcDiff});
+        console.log(item);
     }
+    b = b.filter(a => a.colorDiff < 1); //criteria is to be set to under 0.5
+    distanceCal(a,b);
+}
+
+function distanceCal(a,b) { 
+    console.log(a)
+    console.log(b)
+    console.log(a[0].latitude)
+    const geopoint_a = new GeoPoint(Number(a[0].latitude),Number(a[0].longtitude));
+    var resultArr =[];
+    b.forEach(function(item) {
+        let geopoint_b = new GeoPoint(Number(item.latitude),Number(item.longtitude));   
+        let distance = geopoint_a.distanceTo(geopoint_b, inKilometers = true)*1000;
+        let b_item_with_distance = {...item, distance}
+        resultArr = [...resultArr, b_item_with_distance]
+    })
+
+    return resultArr
 }
 
 //match(6,'found');
