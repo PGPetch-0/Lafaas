@@ -13,6 +13,7 @@ const colordiff = require('color-difference');
 const GeoPoint = require('geopoint');
 const { TemporaryCredentials } = require('aws-sdk');
 const token_secret = 'yvMFMf1PVjHxtjSKAYmMvqCqVenaMDYG';
+const stringSimilarity = require('string-similarity');
 
 //some variable setups
 app.use(bodyParser.json());
@@ -46,7 +47,7 @@ let connection = mysql.createConnection({
 function match (item_id,type) {
     let matchA = [];
     let colorA = [];
-    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
+    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
         if (err) {
             throw err;
         } else {
@@ -62,10 +63,10 @@ function match (item_id,type) {
             })
             switch (type) {
                 case 'found': {
-                    x = matchCat(filteredMatchA,'lost');
+                    matchCat(filteredMatchA,'lost');
                 }
                 case 'lost': {
-                    x = matchCat(filteredMatchA,'found');
+                    matchCat(filteredMatchA,'found');
                 }
             }
         }
@@ -73,7 +74,7 @@ function match (item_id,type) {
 }
 
 function matchCat(matchA, type){
-    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".category=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", matchA[0].category, function(err, results) {
+    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".category=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", matchA[0].category, function(err, results) {
         if (err) {
             throw err;
         } else {
@@ -91,14 +92,13 @@ function matchCat(matchA, type){
             }, {});
             const mergedArray = Object.values(arrayHashmap);
             //console.log(mergedArray);
-            return matchColor(matchA,mergedArray);
+            return matchColor(matchA,mergedArray,type);
         }
     });
 }
 
-function matchColor(a,b) {
+function matchColor(a,b,type) {
     //color ex.['ffffff','000000','7f7f7f']
-    console.log(b);
     for(item of b) {
         let bColor = item.color;
         let tempArr = [];
@@ -107,7 +107,7 @@ function matchColor(a,b) {
                 let diff = colordiff.compare(color,c);
                 tempArr.push(diff);
             })
-            console.log(tempArr);
+            //console.log(tempArr);
         }
         let calcDiff = 0;
         tempArr.map(eachdiff => {
@@ -115,30 +115,59 @@ function matchColor(a,b) {
         })
         calcDiff = calcDiff/(tempArr.length*100);
         Object.assign(item,{'colorDiff':calcDiff});
-        console.log(item);
     }
     b = b.filter(a => a.colorDiff < 1); //criteria is to be set to under 0.5
-    distanceCal(a,b);
+    return distanceCal(a,b,type);
 }
 
-function distanceCal(a,b) { 
-    console.log(a)
-    console.log(b)
-    console.log(a[0].latitude)
+function distanceCal(a,b,type) { 
     const geopoint_a = new GeoPoint(Number(a[0].latitude),Number(a[0].longtitude));
     var resultArr =[];
     b.forEach(function(item) {
         let geopoint_b = new GeoPoint(Number(item.latitude),Number(item.longtitude));   
-        let distance = geopoint_a.distanceTo(geopoint_b, inKilometers = true)*1000;
+        let distance = geopoint_a.distanceTo(geopoint_b, inKilometers = true);
         let b_item_with_distance = {...item, distance}
         resultArr = [...resultArr, b_item_with_distance]
     })
+    console.log(resultArr);
+    return StringSimilarity(a,resultArr,type)
+}
 
-    return resultArr
+function StringSimilarity(arrA, arrB,type) {
+    //console.log(arrA)
+    const item1name = arrA[0].name;
+    arrB.forEach(item2 => {
+        let stringSim = stringSimilarity.compareTwoStrings(item1name,item2.name)
+        Object.assign(item2,{ 'StringSim':stringSim });
+    })
+    console.log(arrB);
+    return findMatch(arrA,arrB,type);
+}
+
+function findMatch(arrA, arrB,type) {
+    arrB.forEach(item => {
+        let score = (0.3*(item.distance/2))+(0.7*(1-item.StringSim)); 
+        Object.assign(item, { 'weightedScore':score });
+    })
+    let minScore = Math.min.apply(Math, arrB.map(function(item) { return item.weightedScore; }))
+    arrB = arrB.filter(a => a.weightedScore == minScore && a.weightedScore < 0.5);
+    console.log(arrB);
+    switch (type) {
+        case 'lost': {
+            ret = {code:0, status: '[Found] Request for locker'};
+            console.log(ret)
+        }
+        case 'found': {
+            if(arrB != [])
+            ret = {code:1, status: '[Lost] Match found', item: arrB};
+            else ret = {code:2, status: '[Lost] Match not found'};
+            console.log(ret)
+        }
+    } 
 }
 
 //match(6,'found');
-match(19,'lost');
+match(20,'lost');
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Call something u hoe 🤍');
