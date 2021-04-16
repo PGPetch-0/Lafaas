@@ -191,6 +191,7 @@ app.post('/login', (req, res) => {
             res.json({
                 code: 1,
                 message: 'Successful login',
+                name: user,
                 token: generateToken(user)
             })
         } else {
