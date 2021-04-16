@@ -75,9 +75,9 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
     var device_token;
     // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
     // console.log(date_added);
-    /*if(color.length == 0){
+    if(colors.length == 0){
         res.send('color missing');
-    }*/
+    }
     if(req.body.type == 'found' ){
         img_url = req.body.url;
         type = 0; //freshly registered item will always have type found. Cannot be reserved or claimed.
@@ -354,6 +354,7 @@ function findMatch(arrA, arrB,type) {
     arrB.forEach(item => {
         let score = (0.3*(item.distance/2))+(0.7*(1-item.StringSim)); 
         Object.assign(item, { 'weightedScore':score });
+        console.log(item)
     })
     let minScore = Math.min.apply(Math, arrB.map(function(item) { return item.weightedScore; }))
     arrB = arrB.filter(a => a.weightedScore == minScore && a.weightedScore < 0.5);
@@ -365,7 +366,7 @@ function findMatch(arrA, arrB,type) {
             return ret;
         }
         case 'found': {
-            if(arrB != [])
+            if(arrB.length != 0)
             ret = {code:1, status: '[Lost] Match found', item: arrB};
             else ret = {code:2, status: '[Lost] Match not found'};
             console.log(ret)
