@@ -397,14 +397,7 @@ app.get('/claimhist', (req, res) => {
     });
 });
 
-//User Edit
-app.get('/useredit', (req, res) => {
-    var new_pwd = req.query.new_pwd;
-    var username = req.query.username;
-    connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
-        if (err) throw err;
-    })
-});
+
 
 let scanInterval = {};
 
