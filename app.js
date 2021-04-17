@@ -389,6 +389,23 @@ app.post('/msgHardware', (req, res) => {
     res.send(message)
 })
 
+//Claims History
+app.get('/claimhist', (req, res) => {
+    connection.query(`SELECT JSON_ARRAYAGG(JSON_OBJECT(Items_lost.item_name, Claims.date_claimed, Persons.pid)) FROM Persons INNER JOIN Loses ON Loses.pid = Persons.pid INNER JOIN Items_lost on Items_lost.item_id = Loses.item_id INNER JOIN Claims on Claims.item_id = Items_lost.item_id`, 
+        function(err, results) {
+            if (err) throw err;
+    });
+});
+
+//User Edit
+app.get('/useredit', (req, res) => {
+    var new_pwd = req.query.new_pwd;
+    var username = req.query.username;
+    connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
+        if (err) throw err;
+    })
+});
+
 let scanInterval = {};
 
 app.get('/requestQRdata', (req, res) => { //for frontend client
