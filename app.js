@@ -318,6 +318,18 @@ app.post('/claim',(req, res) => { //type=== 'lost'
     //res.send(qr_id)
 })
 
+//Report
+app.get('/report', (req,res) =>{
+    const pid = req.query.pid;
+    const item_id = req.query.item_id;
+    const message = req.query.message;
+    const url = req.query.evidence_url;
+    var date = new Date().toISOString().slice(0, 10);
+    connection.query("INSERT INTO `Reports` (pid, item_id, message, evidence_url, date_reported) VALUES (" + pid + ", '"+item_id+"', '"+message+"', '"+url+"',"+date+")", function(err,result){
+        if(err) console.log()
+    })
+})
+
 //Matching, to be called by registerItem
 function match (item_id,type) {
     return new Promise((resolve,reject) => {
