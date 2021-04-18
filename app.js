@@ -152,8 +152,11 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                         (async () => {
                             const result = await match(item_id,'found');
                             console.log("result:",result);
-                            //if(result.code == 0) res.send("yo");
-                            //will request qr
+                            if(result.code == 0) {
+                                //set timer to one hour, if exceeds, delete entry
+                                //res QR data to frontend 
+                            }
+                            
                         })();
                     }
                 })
@@ -168,7 +171,7 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
 app.get('/noti', (req, res) => {
 
     const chunks = expo.chunkPushNotifications([
-        { to: "ExponentPushToken[qPdMFxC5qgVRvhvSPm-XMn]", sound: "default", body: req.query.msg }
+        { to: "ExponentPushToken["+req.query.noti_token+"]", sound: "default", body: req.query.msg }
     ]);
 
     for (let each of chunks) {
@@ -265,6 +268,7 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
+
 app.post('/claim',(req, res) => { //type=== 'lost'
     const pid = req.body.pid
     const found_id = req.body.item_id
@@ -301,7 +305,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                             delete qrAvailable[qr_id]["scanInterval"]
                             connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                                 if(err) throw err;
-                                console.log(`DELETE FROM Claim item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                                console.log(`DELETE FROM Claims item_id: ${qrAvailable[qrid]["itemID"]}`)  
                             })
                             connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                                 if(err) throw err;
@@ -309,7 +313,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                             })
                         }, 20000);
                         qrAvailable[qr_id]["scanInterval"] = timer
-                    });
+                    });                
                     res.send(''+qr_id)
                 })
             })
@@ -498,7 +502,7 @@ async function getModuleID(item_id){
     var retlocker = lockersWithDistance.find(function(locker){ return (locker.distance == shortestDistance && locker.vacancy == 0); })
     console.log("Closest Available Locker: "+retlocker.module_id);
     return retlocker.module_id
-  } 
+} 
 
 app.get('/requestQRdata', (req, res) => { //for frontend client
     const item_id = req.query.item_id;
