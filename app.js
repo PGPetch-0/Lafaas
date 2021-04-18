@@ -399,12 +399,23 @@ app.get('/claimhist', (req, res) => {
 
 //User Edit
 app.get('/useredit', (req, res) => {
+    var curr_pwd = req.query.curr_pwd;
     var new_pwd = req.query.new_pwd;
-    var username = req.query.username;
-    connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
-        if (err) throw err;
-    })
+    var token = req.query.token;
+    var username = jwt.verify(token, secretkey);
+    //No username verification because to get to this point (changing password), user has to exist right?
+    if (curr_pwd == connection.query(`SELECT password FROM Persons WHERE username=?`, [username])){
+        connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
+            if (err) throw err;
+        });
+    } else {
+        res.json({
+            message: "Current password is incorrect."
+        });
+    }
 });
+
+
 
 let scanInterval = {};
 
