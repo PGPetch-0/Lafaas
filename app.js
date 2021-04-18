@@ -119,12 +119,16 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                         })
                     }
                     const result = match(item_id,'lost');
-                    /*switch (result.code) {
-                        case '1':
-                            res.send(result.item);
-                        case '2':
-                            res.send(result.status);
-                    }*/
+                    (async () => {
+                        const result = await match(item_id,'lost');
+                        console.log("result:",result);
+                        switch (result.code) {
+                                case 1:
+                                    res.send(result.item);
+                                case 2:
+                                    res.send(result.status);
+                        }
+                    })();
                 })
             }
         );
@@ -145,13 +149,12 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                     }
                     const result = match(item_id,'found');
                     if(result.code == 0) {
-                        //
-                        /*connect to hardward to prepare the module
-                        set timer to 1 hr, if the item isn't stored, delete entry , call bim's method
-                        let id = result.item.item_id;
-                        let title = "Found your possible item";
-                        let msg = "Come see if this is your lost item!"
-                        res.redirect(200, '/noti?address='+address+'&title='+title+'&msg='+msg);*/
+                        (async () => {
+                            const result = await match(item_id,'found');
+                            console.log("result:",result);
+                            //if(result.code == 0) res.send("yo");
+                            //will request qr
+                        })();
                     }
                 })
                 
@@ -262,7 +265,6 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
-
 app.post('/claim',(req, res) => { //type=== 'lost'
     const pid = req.body.pid
     const found_id = req.body.item_id
@@ -318,131 +320,98 @@ app.post('/claim',(req, res) => { //type=== 'lost'
 
 //Matching, to be called by registerItem
 function match (item_id,type) {
-    let matchA = [];
-    let colorA = [];
-    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
-        if (err) {
-            throw err;
-        } else {
-            matchA = results.map(result => Object.values(result)[0]);
-            matchA.map(item => colorA.push(item.color))
-            matchA.map(item => item.color = colorA);
-            matchA.flat();
-            const seen = new Set();
-            const filteredMatchA = matchA.filter(el => {
-                const duplicate = seen.has(el.id);
-                seen.add(el.id);
-                return !duplicate;
-            })
-            switch (type) {
-                case 'found': {
-                    x = matchCat(filteredMatchA,'lost');
-                }
-                case 'lost': {
-                    x = matchCat(filteredMatchA,'found');
-                }
+    return new Promise((resolve,reject) => {
+            let matchA = [];
+            let colorA = [];
+        connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
+            if (err) {
+                reject(err);
+            } else {
+                matchA = results.map(result => Object.values(result)[0]);
+                matchA.map(item => colorA.push(item.color))
+                matchA.map(item => item.color = colorA);
+                matchA.flat();
+                const seen = new Set();
+                const filteredMatchA = matchA.filter(el => {
+                    const duplicate = seen.has(el.id);
+                    seen.add(el.id);
+                    return !duplicate;
+                })
+                let type2 = (type == 'lost')? 'found':'lost';
+                connection.query("SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id", matchA[0].category, async function(err, results) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        //match category
+                        let matchB = results.map(result => Object.values(result)[0]);
+                        matchB.map(a => {
+                            let colorTemp = [];
+                            colorTemp.push(a.color);
+                            a.color = colorTemp;
+                        });
+                        const arrayHashmap = matchB.reduce((obj, item) => {
+                            obj[item.item_id] ? obj[item.item_id].color.push(...item.color) : (obj[item.item_id] = { ...item });
+                            return obj;
+                        }, {});
+                        var mergedArray = Object.values(arrayHashmap);
+                        //match color
+                        for(item of mergedArray) {
+                            let bColor = item.color;
+                            let tempArr = [];
+                            for(color of filteredMatchA[0].color) {
+                                bColor.map(c => {
+                                    let diff = colordiff.compare(color,c);
+                                    tempArr.push(diff);
+                                })
+                                console.log(tempArr);
+                            }
+                            let calcDiff = 0;
+                            tempArr.map(eachdiff => {
+                                calcDiff += eachdiff;
+                            })
+                            calcDiff = calcDiff/(tempArr.length*100);
+                            Object.assign(item,{'colorDiff':calcDiff});
+                            console.log(item);
+                        }
+                        mergedArray = mergedArray.filter(a => a.colorDiff < 0.5); //criteria is set to under 0.5
+                        //distance and string similarity calculation
+                        const geopoint_a = new GeoPoint(Number(filteredMatchA[0].latitude),Number(filteredMatchA[0].longtitude));
+                        var resultArr =[];
+                        mergedArray.forEach(function(item) {
+                            let geopoint_b = new GeoPoint(Number(item.latitude),Number(item.longtitude));   
+                            let distance = geopoint_a.distanceTo(geopoint_b, inKilometers = true);
+                            let b_item_with_distance = {...item, distance}
+                            resultArr = [...resultArr, b_item_with_distance]
+                        })
+                        console.log(resultArr);
+                        const item1name = filteredMatchA[0].name;
+                        resultArr.forEach(item2 => {
+                            let stringSim = stringSimilarity.compareTwoStrings(item1name,item2.name)
+                            Object.assign(item2,{ 'StringSim':stringSim });
+                        })
+                        console.log(resultArr);
+                        //match
+                        resultArr.forEach(item => {
+                            let score = (0.3*(item.distance/2))+(0.7*(1-item.StringSim)); 
+                            Object.assign(item, { 'weightedScore':score });
+                            console.log(item)
+                        })
+                        let minScore = Math.min.apply(Math, resultArr.map(function(item) { return item.weightedScore; }))
+                        resultArr = resultArr.filter(a => a.weightedScore == minScore && a.weightedScore < 0.5);
+                        console.log(resultArr);
+                        if(resultArr.length != 0 && type == 'lost') {
+                            resolve({code:1, status: '[Lost] Match found', item: resultArr});
+                        } else if(resultArr.length == 0 && type == 'lost'){
+                            resolve({code:2, status: '[Lost] Match not found'});
+                        } else if(type == 'found') {
+                            resolve({code:0, status: '[Found] Req locker', item: resultArr});
+                        }
+                    }
+                });
             }
-        }
-    });
-}
-
-function matchCat(matchA, type){
-    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".category=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", matchA[0].category, function(err, results) {
-        if (err) {
-            throw err;
-        } else {
-            let matchB = results.map(result => Object.values(result)[0]);
-            //console.log(matchB);
-            matchB.map(a => {
-                let colorTemp = [];
-                colorTemp.push(a.color);
-                a.color = colorTemp;
-            });
-            //console.log(matchB);
-            const arrayHashmap = matchB.reduce((obj, item) => {
-                obj[item.item_id] ? obj[item.item_id].color.push(...item.color) : (obj[item.item_id] = { ...item });
-                return obj;
-            }, {});
-            const mergedArray = Object.values(arrayHashmap);
-            //console.log(mergedArray);
-            return matchColor(matchA,mergedArray,type);
-        }
-    });
-}
-
-function matchColor(a,b,type) {
-    //color ex.['ffffff','000000','7f7f7f']
-    console.log(b);
-    for(item of b) {
-        let bColor = item.color;
-        let tempArr = [];
-        for(color of a[0].color) {
-            bColor.map(c => {
-                let diff = colordiff.compare(color,c);
-                tempArr.push(diff);
-            })
-            console.log(tempArr);
-        }
-        let calcDiff = 0;
-        tempArr.map(eachdiff => {
-            calcDiff += eachdiff;
-        })
-        calcDiff = calcDiff/(tempArr.length*100);
-        Object.assign(item,{'colorDiff':calcDiff});
-        console.log(item);
-    }
-    b = b.filter(a => a.colorDiff < 0.5); //criteria is set to under 0.5
-    return distanceCal(a,b,type);
-}
-
-//get distance 
-function distanceCal(a,b,type) { 
-    const geopoint_a = new GeoPoint(Number(a[0].latitude),Number(a[0].longtitude));
-    var resultArr =[];
-    b.forEach(function(item) {
-        let geopoint_b = new GeoPoint(Number(item.latitude),Number(item.longtitude));   
-        let distance = geopoint_a.distanceTo(geopoint_b, inKilometers = true);
-        let b_item_with_distance = {...item, distance}
-        resultArr = [...resultArr, b_item_with_distance]
+        });
     })
-    console.log(resultArr);
-    return StringSimilarity(a,resultArr,type)
-}
-
-function StringSimilarity(arrA, arrB,type) {
-    //console.log(arrA)
-    const item1name = arrA[0].name;
-    arrB.forEach(item2 => {
-        let stringSim = stringSimilarity.compareTwoStrings(item1name,item2.name)
-        Object.assign(item2,{ 'StringSim':stringSim });
-    })
-    console.log(arrB);
-    return findMatch(arrA,arrB,type);
-}
-
-function findMatch(arrA, arrB,type) {
-    arrB.forEach(item => {
-        let score = (0.3*(item.distance/2))+(0.7*(1-item.StringSim)); 
-        Object.assign(item, { 'weightedScore':score });
-        console.log(item)
-    })
-    let minScore = Math.min.apply(Math, arrB.map(function(item) { return item.weightedScore; }))
-    arrB = arrB.filter(a => a.weightedScore == minScore && a.weightedScore < 0.5);
-    console.log(arrB);
-    switch (type) {
-        case 'lost': {
-            ret = {code:0, status: '[Found] Request for locker'};
-            console.log(ret)
-            return ret;
-        }
-        case 'found': {
-            if(arrB.length != 0)
-            ret = {code:1, status: '[Lost] Match found', item: arrB};
-            else ret = {code:2, status: '[Lost] Match not found'};
-            console.log(ret)
-            return ret;
-        }
-    } 
+    
 }
 
 async function sortByDistance(lost_id,arr){
@@ -498,6 +467,7 @@ let current_qrid = 1;
  * @param {*} module_id : can be null for type found
  * @returns qr_id
  */
+
 function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
     const return_qr = current_qrid
     current_qrid++;
@@ -529,6 +499,26 @@ async function getModuleID(item_id){
     console.log("Closest Available Locker: "+retlocker.module_id);
     return retlocker.module_id
   } 
+
+app.get('/requestQRdata', (req, res) => { //for frontend client
+    const item_id = req.query.item_id;
+    const device_token = req.query.device_token;
+    const type = req.query.type;
+    const item_current_location = req.query.item_current_location;
+
+    res.on('finish', () => {
+        const timer = setTimeout(() =>{
+            console.log(`Timer is end ${device_token}`)
+            delete scanInterval[device_token]
+        }, 3600000);
+        scanInterval[device_token] = timer;
+    });
+
+    const module_ID = 'ENG101' //getModuleID(item_current_location)
+    const timestamp = Date.now();
+    const QRdata = { "type": type,"moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
+    res.json(QRdata);
+})
 
 app.get('/informClient', (req, res) => { //for hardware
     const token = req.query.token; //noti_token
