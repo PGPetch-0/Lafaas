@@ -458,6 +458,51 @@ app.post('/msgHardware', (req, res) => {
     res.send(message)
 })
 
+//Claims History
+app.get('/claimhist', (req, res) => {
+    connection.query(`SELECT JSON_ARRAYAGG(JSON_OBJECT(Items_lost.item_name, Claims.date_claimed, Persons.pid)) FROM Persons INNER JOIN Loses ON Loses.pid = Persons.pid INNER JOIN Items_lost on Items_lost.item_id = Loses.item_id INNER JOIN Claims on Claims.item_id = Items_lost.item_id`, 
+        function(err, results) {
+            if (err) throw err;
+    });
+});
+
+//User Edit
+app.get('/useredit', (req, res) => {
+    var curr_pwd = req.query.curr_pwd;
+    var new_pwd = req.query.new_pwd;
+    var token = req.query.token;
+    var username = jwt.verify(token, secretkey);
+    //No username verification because to get to this point (changing password), user has to exist right?
+    if (curr_pwd == connection.query(`SELECT password FROM Persons WHERE username=?`, [username])){
+        connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
+            if (err) throw err;
+        });
+    } else {
+        res.json({
+            message: "Current password is incorrect."
+        });
+    }
+});
+
+
+
+let scanInterval = {};
+
+app.get('/requestQRdata', (req, res) => { //for frontend client
+    const item_id = req.query.item_id;
+    const device_token = req.query.device_token;
+    const type = req.query.type;
+    const item_current_location = req.query.item_current_location;
+
+    res.on('finish', () => {
+        const timer = setTimeout(() =>{
+            console.log(`Timer is end ${device_token}`)
+            delete scanInterval[device_token]
+        }, 3600000);
+        scanInterval[device_token] = timer;
+    });
+
+    const module_ID = 'ENG101' //getModuleID(item_current_location)
 
 let current_qrid = 0;
 /**
