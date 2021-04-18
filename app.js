@@ -457,6 +457,31 @@ app.get('/useredit', (req, res) => {
 
 
 let scanInterval = {};
+let current_qrid = 0;
+/**
+ * Generate qrData and store in cache 
+ * @param {*} item_id 
+ * @param {*} item_current_location 
+ * @param {*} device_token : aka noti_token
+ * @param {*} type : lost or found
+ * @param {*} module_id : can be null for type found
+ * @returns qr_id
+ */
+
+function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
+    current_qrid++;
+    if(type === 'found' && typeof module_id === 'undefined')
+        module_id = getModuleID(item_id) //getModuleID(item_current_location) // moduleid will never be null at return
+    const timestamp = Date.now();
+    const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "timestamp": timestamp, "scanInterval": null }
+    qrAvailable[current_qrid] = QRdata
+    console.log(qrAvailable);
+    return current_qrid;
+}
+
+async function getModuleID(item_id){
+    return
+} 
 
 app.get('/requestQRdata', (req, res) => { //for frontend client
     const item_id = req.query.item_id;
