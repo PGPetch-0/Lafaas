@@ -268,6 +268,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
     const found_id = req.body.item_id
     const national_id = req.body.national_id
     const tel = req.body.tel
+    const qrid = current_qrid 
     connection.query(`SELECT type FROM Items_found WHERE item_id=${found_id}`, (err,result)=>{
         if(result[0].type === 1){
             res.send("Item is reserved, Can't claim this")
@@ -487,23 +488,6 @@ app.get('/useredit', (req, res) => {
 
 
 let scanInterval = {};
-
-app.get('/requestQRdata', (req, res) => { //for frontend client
-    const item_id = req.query.item_id;
-    const device_token = req.query.device_token;
-    const type = req.query.type;
-    const item_current_location = req.query.item_current_location;
-
-    res.on('finish', () => {
-        const timer = setTimeout(() =>{
-            console.log(`Timer is end ${device_token}`)
-            delete scanInterval[device_token]
-        }, 3600000);
-        scanInterval[device_token] = timer;
-    });
-
-    const module_ID = 'ENG101' //getModuleID(item_current_location)
-
 let current_qrid = 0;
 /**
  * Generate qrData and store in cache 
