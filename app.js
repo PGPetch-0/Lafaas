@@ -279,15 +279,15 @@ app.post('/claim',(req, res) => { //type=== 'lost'
         else{
             res.on('finish', () => {
                 const timer = setTimeout(() =>{ //timeout remove claim
-                    console.log(`Timer is end for qr_id: ${qr_id}`)
+                    console.log(`Timer is end for qr_id: ${qrid}`)
                     delete qrAvailable[qr_id]["scanInterval"]
-                    connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qr_id]["itemID"]}`,(err,result)=>{
+                    connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                         if(err) throw err;
-                        console.log(`DELETE FROM Claim item_id: ${qrAvailable[qr_id]["itemID"]}`)  
+                        console.log(`DELETE FROM Claim item_id: ${qrAvailable[qrid]["itemID"]}`)  
                     })
-                    connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qr_id]["itemID"]}`,(err,result)=>{
+                    connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                         if(err) throw err;
-                        console.log(`RESET Item_found item_id: ${qrAvailable[qr_id]["itemID"]} from reserved --> registered`) //set type back to registered  
+                        console.log(`RESET Item_found item_id: ${qrAvailable[qrid]["itemID"]} from reserved --> registered`) //set type back to registered  
                     })
                     console
             }, 20000);
@@ -488,7 +488,7 @@ app.get('/useredit', (req, res) => {
 
 
 let scanInterval = {};
-let current_qrid = 0;
+let current_qrid = 1;
 /**
  * Generate qrData and store in cache 
  * @param {*} item_id 
@@ -499,19 +499,36 @@ let current_qrid = 0;
  * @returns qr_id
  */
 function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
+    const return_qr = current_qrid
     current_qrid++;
     if(type === 'found' && typeof module_id === 'undefined')
-        module_id = getModuleID(item_id) //getModuleID(item_current_location) // moduleid will never be null at return
+        module_id = await getModuleID(item_id) //getModuleID(item_current_location) // moduleid will never be null at return
     const timestamp = Date.now();
     const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "timestamp": timestamp, "scanInterval": null }
-    qrAvailable[current_qrid] = QRdata
-    console.log(qrAvailable);
-    return current_qrid;
+    qrAvailable[return_qr] = QRdata
+    return return_qr;
 }
 
 async function getModuleID(item_id){
-    return
-} 
+    let sql= `SELECT item_id, location_lat, location_long FROM Items_found WHERE item_id=`+item_id
+    let sql2 = 'SELECT * FROM Lockers'
+    const foundQuery = connection.promise().query(sql)
+    const allLockerQuery = connection.promise().query(sql2)
+    const [foundCoordinate] = await foundQuery
+    const [allLockers] = await allLockerQuery
+    const found_point = new GeoPoint(Number(foundCoordinate[0].location_lat),Number(foundCoordinate[0].location_long))
+    var lockersWithDistance = []
+    allLockers.forEach(locker =>{
+      let locker_point = new GeoPoint(Number(locker.module_lat),Number(locker.module_long))
+      let distance = found_point.distanceTo(locker_point, inKilometers = true)*1000;
+      let lockerWithDistance = {...locker, distance}
+      lockersWithDistance = [...lockersWithDistance, lockerWithDistance]
+    })
+    var shortestDistance = Math.min.apply(Math,lockersWithDistance.map(function(locker){return locker.distance;}))
+    var retlocker = lockersWithDistance.find(function(locker){ return (locker.distance == shortestDistance && locker.vacancy == 0); })
+    console.log("Closest Available Locker: "+retlocker.module_id);
+    return retlocker.module_id
+  } 
 
 app.get('/informClient', (req, res) => { //for hardware
     const token = req.query.token; //noti_token
@@ -588,26 +605,6 @@ app.post('/uploadFingerprint', (req,res)=>{
         res.json({'openModule': module_id, 'type': type, 'device_token': device_token});
     }
 })
-
-/*
-async function requestQRdata(itemID, personID, type, item_current_location) {
-    const module_ID = 'ENG101'
-    const timestamp = Date.now();
-    const QRdata = { "moduleID": module_ID, "itemID": itemID, "location": item_current_location, "deviceToken": token, "TimeStamp": timestamp }
-    return QRdata;
-}
-
-async function getData(itemID, type) {
-    if (type === 'found') {
-        const moduleID = "ENG101" //placehold for test require query and module selection
-        const sql = `select device_token from Items_found where item_id=${itemID}`
-        const queryPromise = connection.promise().query(sql)
-        const [items, fields] = await queryPromise
-        const ret = { "ModuleID": moduleID, "device_token": items[0].device_token }
-        return ret
-    }
-}
-*/
 
 http.listen(process.env.PORT || 7000, '0.0.0.0', () => {
     console.log('Listening');
