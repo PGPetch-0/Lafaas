@@ -279,22 +279,6 @@ app.post('/claim',(req, res) => { //type=== 'lost'
             res.send("Item is claimed, Can't Claim this")
         }
         else{
-            res.on('finish', () => {
-                const timer = setTimeout(() =>{ //timeout remove claim
-                    console.log(`Timer is end for qr_id: ${qrid}`)
-                    delete qrAvailable[qr_id]["scanInterval"]
-                    connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                        if(err) throw err;
-                        console.log(`DELETE FROM Claim item_id: ${qrAvailable[qrid]["itemID"]}`)  
-                    })
-                    connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                        if(err) throw err;
-                        console.log(`RESET Item_found item_id: ${qrAvailable[qrid]["itemID"]} from reserved --> registered`) //set type back to registered  
-                    })
-                    console
-            }, 20000);
-            qrAvailable[qr_id]["scanInterval"] = timer
-        });
             connection.query(`SELECT item_id, module_id,current_location,noti_token FROM Stores, Persons WHERE item_id = ${found_id} AND pid = ${pid}`,(err,result)=>{
                 if(result.length !== 0 ){
                     connection.query(`INSERT INTO Claims (item_id, national_id, tel) VALUE(${found_id},${national_id},${tel})`,(err,result)=>{
@@ -309,9 +293,25 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                     res.send(`no found item id: ${found_id} in the database`)
                 }
                 const storeInfo = result[0] 
-                qr_id = getQR(storeInfo.item_id,storeInfo.current_location,storeInfo.noti_token,'lost',storeInfo.module_id)
-                
-            res.send(''+qr_id)
+                getQR(storeInfo.item_id,storeInfo.current_location,storeInfo.noti_token,'lost',storeInfo.module_id)
+                .then((qr_id)=>{
+                    res.on('finish', () => {
+                        const timer = setTimeout(() =>{ //timeout remove claim
+                            console.log(`Timer is end for qr_id: ${qrid}`)
+                            delete qrAvailable[qr_id]["scanInterval"]
+                            connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                if(err) throw err;
+                                console.log(`DELETE FROM Claim item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                            })
+                            connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                if(err) throw err;
+                                console.log(`RESET Item_found item_id: ${qrAvailable[qrid]["itemID"]} from reserved --> registered`) //set type back to registered  
+                            })
+                        }, 20000);
+                        qrAvailable[qr_id]["scanInterval"] = timer
+                    });
+                    res.send(''+qr_id)
+                })
             })
         }
     })
@@ -468,7 +468,7 @@ let current_qrid = 1;
  * @returns qr_id
  */
 
-function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
+async function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
     const return_qr = current_qrid
     current_qrid++;
     if(type === 'found' && typeof module_id === 'undefined')
