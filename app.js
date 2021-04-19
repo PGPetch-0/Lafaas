@@ -74,7 +74,7 @@ app.get('/', (req, res) => {
     }
 });
 
-app.post('/registeritem', (req,res) =>{ // upload picture left
+app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload picture left
     //query all fields
     var item_name = req.body.item_name;
     var location_lat = req.body.location_lat;
@@ -86,7 +86,6 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
     var colors = req.body.color.split(','); // sent as string of colors divided by ,
     //variables for Items_found
     var type;
-    var img_url;
     var device_token;
     // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
     // console.log(date_added);
@@ -97,10 +96,6 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
         type = 0; //freshly registered item will always have type found. Cannot be reserved or claimed.
         device_token = req.body.device_token;
     }
-    upload.single('image'), function (req, res, next) {
-        console.log('item name: ' + req.body.item_name);
-        console.log('color: ' + req.body.color);
-        console.log('url: ' + req.file.location);
         //insert according to type
         if(req.body.type == 'lost'){
             if(colors.length >2) res.send("There can be at most 2 colors!");
@@ -181,7 +176,6 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
         }else{
             res.send('type parameter error');
         }
-    }
 });
 
 app.get('/noti', (req, res) => {
