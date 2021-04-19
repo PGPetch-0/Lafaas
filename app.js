@@ -158,7 +158,7 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
                                                     console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
                                                 })
                                             })
-                                        }, 60000);
+                                        }, 300000);
                                         qrAvailable[qr_id]["scanInterval"] = timer
                                     });                
                                     res.send(''+qr_id)
@@ -261,9 +261,25 @@ app.get('/db', (req, res) => { // used to check content of table
 //Item Reg
 app.get('/item_reg', (req, res) => {
     const type = 'found'
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description,'url', Items_"+type+".image_url, 'color', Items_"+type+"_color.color)) AS 'Registered' FROM Items_"+type+", Items_"+type+"_color WHERE type = 0 AND device_token != '" + req.query.token + "'", function (err, results) {
+    connection.query("SELECT JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description,'url', Items_"+type+".image_url, 'color', Items_"+type+"_color.color) AS 'Registered' FROM Items_"+type+", Items_"+type+"_color WHERE type = 0 AND device_token != '" + req.query.token + "'", function (err, results) {
         if (err) throw err;
-        res.json(results);
+        items = results.map(result => Object.values(result)[0]);
+        for(item of items) {
+            let temp = [];
+            items.map(a => {
+                if(a.item_id == item.item_id)
+                temp.push(a.color);
+            })
+            item.color = temp.toString();
+        }
+        items.flat();
+        const seen = new Set();
+        const filteredItems = items.filter(el => {
+            const duplicate = seen.has(el.id);
+            seen.add(el.id);
+            return !duplicate;
+        })
+        res.send(filteredItems);
     });
 });
 
