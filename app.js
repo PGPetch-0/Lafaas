@@ -485,6 +485,81 @@ app.get('/useredit', (req, res) => {
     }
 });
 
+//My registered items
+app.get('/myregister', (req, res) => {
+    const token = req.query.token;
+
+    const query_lost = "SELECT Items_lost.item_id FROM Items_lost, Loses, Persons WHERE Items_lost.item_id = Loses.item_id AND Loses.pid = Persons.pid AND Persons.noti_token = '" + token + "'";
+    const query_found = "SELECT item_id FROM Items_found WHERE device_token = '" + token + "'";
+
+    let list_of_lost = [];
+    let list_of_found = [];
+    let list_of_item = [];
+
+    let iteration = 0;
+    let maxItr = 0;
+
+
+    const fetch = async (item_id, type) => {
+        let temp = [];
+        let temp_color = [];
+
+        switch (type) {
+            case 0: //found
+                connection.query("SELECT * FROM Items_found WHERE item_id=" + item_id, (err, result) => {
+                    temp.push(result[0]);
+                    connection.query("SELECT * FROM Items_found_color WHERE item_id=" + item_id, (err, result) => {
+                        result.map(e => temp_color.push(e.color));
+
+                        temp[0].color = temp_color.toString();
+                        temp[0].type = 'Found';
+                        iteration++;
+
+                        list_of_item.push(temp[0]);
+                        if (iteration == maxItr) res.json(list_of_item);
+                    });
+                });
+                break;
+
+            case 1: //lost
+                connection.query("SELECT * FROM Items_lost WHERE item_id=" + item_id, (err, result) => {
+                    temp.push(result[0]);
+                    connection.query("SELECT * FROM Items_lost_color WHERE item_id=" + item_id, (err, result) => {
+                        result.map(e => temp_color.push(e.color));
+
+                        temp[0].color = temp_color[0].toString();
+                        temp[0].type = 'Lost';
+                        iteration++;
+
+                        list_of_item.push(temp[0]);
+                        if (iteration == maxItr) res.json(list_of_item);
+                    });
+                });
+                break;
+        }
+
+    };
+
+    connection.query(query_lost, (err, result) => {
+        result.map(e => list_of_lost.push(e.item_id));
+
+        connection.query(query_found, (err, result) => {
+            result.map(e => list_of_found.push(e.item_id));
+
+            maxItr = list_of_lost.length + list_of_found.length;
+
+            for (let each of list_of_found) {
+                fetch('' + each, 0);
+            }
+
+            for (let each of list_of_lost) {
+                fetch('' + each, 1);
+            }
+
+        })
+    })
+})
+
 
 
 let scanInterval = {};
