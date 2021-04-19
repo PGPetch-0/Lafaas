@@ -261,7 +261,7 @@ app.get('/db', (req, res) => { // used to check content of table
 //Item Reg
 app.get('/item_reg', (req, res) => {
     const type = 'found'
-    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE type = 0 AND device_token != '" + req.query.token + "' ORDER BY date_added ASC", function (err, results) {
+    connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE type = 0 AND device_token != '" + req.query.token + "'", function (err, results) {
         if (err) throw err;
         res.json(results[0]);
     });
@@ -269,7 +269,7 @@ app.get('/item_reg', (req, res) => {
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function (err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1", function (err, results) {
         if (err) throw err;
         res.json(results[0]);
     });
