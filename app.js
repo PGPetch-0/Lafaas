@@ -273,6 +273,7 @@ app.get('/item_reg', (req, res) => {
             item.color = temp.toString();
         }
         items.flat();
+        res.send(items);
         const seen = new Set();
         const filteredItems = items.filter(el => {
             const duplicate = seen.has(el.id);
@@ -376,7 +377,9 @@ function match (item_id,type) {
                     return !duplicate;
                 })
                 let type2 = (type == 'lost')? 'found':'lost';
-                connection.query("SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id", matchA[0].category, async function(err, results) {
+                let qry = (type2 == 'found')? "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color, 'image_url', Items_"+type2+".image_url, 'device_token', Items_"+type2+".device_token)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id" : 
+                "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id";
+                connection.query(qry, matchA[0].category, async function(err, results) {
                     if (err) {
                         reject(err);
                     } else {
