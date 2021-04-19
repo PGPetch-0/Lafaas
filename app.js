@@ -244,39 +244,106 @@ app.get('/db', (req, res) => { // used to check content of table
 });
 
 ///Item Listing System Methods
+//My registered items
+app.get('/myregister', (req, res) => {
+    const token = req.query.token;
+
+    const query_lost = "SELECT Items_lost.item_id FROM Items_lost, Loses, Persons WHERE Items_lost.item_id = Loses.item_id AND Loses.pid = Persons.pid AND Persons.noti_token = '" + token + "'";
+    const query_found = "SELECT item_id FROM Items_found WHERE device_token = '" + token + "'";
+
+    let list_of_lost = [];
+    let list_of_found = [];
+    let list_of_item = [];
+
+    let iteration = 0;
+    let max_iteration = 0;
+
+    const fetch = async (item_id, t) => {
+        let item;
+        let colors = [];
+        const type = t === 0 ? "Found" : "Lost";
+
+        const query_item = "SELECT * FROM Items_" + type.toLowerCase() + " WHERE item_id=" + item_id;
+        const query_color = "SELECT * FROM Items_" + type.toLowerCase() + "_color WHERE item_id=" + item_id
+
+        connection.query(query_item, (err, result) => {
+            item = result[0];
+            connection.query(query_color, (err, result) => {
+                result.map(e => colors.push(e.color));
+
+                item.color = colors.toString();
+                item.type = type;
+                iteration++;
+
+                list_of_item.push(item);
+                if (iteration == max_iteration) res.json(list_of_item);
+            });
+        });
+    };
+
+    connection.query(query_lost, (err, result) => {
+        result.map(e => list_of_lost.push(e.item_id));
+
+        connection.query(query_found, (err, result) => {
+            result.map(e => list_of_found.push(e.item_id));
+
+            max_iteration = list_of_lost.length + list_of_found.length;
+
+            if (max_iteration === 0) res.json([]);
+
+            for (let each of list_of_found) {
+                fetch(each, 0);
+            }
+
+            for (let each of list_of_lost) {
+                fetch(each, 1);
+            }
+        })
+    })
+
+})
 
 //Item Reg
 app.get('/item_reg', (req, res) => {
-    const type = 'found'
-    connection.query("SELECT JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description,'url', Items_"+type+".image_url, 'color', Items_"+type+"_color.color) AS 'Registered' FROM Items_"+type+", Items_"+type+"_color WHERE type = 0 AND device_token != '" + req.query.token + "'", function (err, results) {
-        if (err) throw err;
-        items = results.map(result => Object.values(result)[0]);
-        for(item of items) {
-            let temp = [];
-            items.map(a => {
-                if(a.item_id == item.item_id)
-                temp.push(a.color);
-            })
-            item.color = temp.toString();
+    const token = req.query.token;
+    let item_list;
+
+    connection.query("SELECT * FROM Items_found WHERE type = 0 AND device_token != '" + token + "'", (err, result) => {
+        item_list = result;
+
+        if (item_list.length === 0) res.json([]);
+
+        for (let i = 0; i < item_list.length; i++) {
+            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
+                const colors = result.map(e => e.color);
+                item_list[i].color = colors.toString();
+
+                if (i === item_list.length - 1) res.json(item_list);
+            });
         }
-        items.flat();
-        res.send(items);
-        const seen = new Set();
-        const filteredItems = items.filter(el => {
-            const duplicate = seen.has(el.id);
-            seen.add(el.id);
-            return !duplicate;
-        })
-        res.send(filteredItems);
-    });
+
+    })
 });
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 2", function (err, results) {
-        if (err) throw err;
-        res.json(results);
-    });
+    let item_list;
+
+    connection.query("SELECT * FROM Items_found WHERE type = 2", (err, result) => {
+        item_list = result;
+
+        if (item_list.length === 0) res.json([]);
+
+        for (let i = 0; i < item_list.length; i++) {
+            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
+                const colors = result.map(e => e.color);
+                item_list[i].color = colors.toString();
+
+                if (i === item_list.length - 1) res.json(item_list);
+            });
+        }
+
+    })
 });
 
 app.post('/claim',(req, res) => { //type=== 'lost'
@@ -483,83 +550,6 @@ app.get('/useredit', (req, res) => {
         });
     }
 });
-
-//My registered items
-app.get('/myregister', (req, res) => {
-    const token = req.query.token;
-
-    const query_lost = "SELECT Items_lost.item_id FROM Items_lost, Loses, Persons WHERE Items_lost.item_id = Loses.item_id AND Loses.pid = Persons.pid AND Persons.noti_token = '" + token + "'";
-    const query_found = "SELECT item_id FROM Items_found WHERE device_token = '" + token + "'";
-
-    let list_of_lost = [];
-    let list_of_found = [];
-    let list_of_item = [];
-
-    let iteration = 0;
-    let maxItr = 0;
-
-
-    const fetch = async (item_id, type) => {
-        let temp = [];
-        let temp_color = [];
-
-        switch (type) {
-            case 0: //found
-                connection.query("SELECT * FROM Items_found WHERE item_id=" + item_id, (err, result) => {
-                    temp.push(result[0]);
-                    connection.query("SELECT * FROM Items_found_color WHERE item_id=" + item_id, (err, result) => {
-                        result.map(e => temp_color.push(e.color));
-
-                        temp[0].color = temp_color.toString();
-                        temp[0].type = 'Found';
-                        iteration++;
-
-                        list_of_item.push(temp[0]);
-                        if (iteration == maxItr) res.json(list_of_item);
-                    });
-                });
-                break;
-
-            case 1: //lost
-                connection.query("SELECT * FROM Items_lost WHERE item_id=" + item_id, (err, result) => {
-                    temp.push(result[0]);
-                    connection.query("SELECT * FROM Items_lost_color WHERE item_id=" + item_id, (err, result) => {
-                        result.map(e => temp_color.push(e.color));
-
-                        temp[0].color = temp_color[0].toString();
-                        temp[0].type = 'Lost';
-                        iteration++;
-
-                        list_of_item.push(temp[0]);
-                        if (iteration == maxItr) res.json(list_of_item);
-                    });
-                });
-                break;
-        }
-
-    };
-
-    connection.query(query_lost, (err, result) => {
-        result.map(e => list_of_lost.push(e.item_id));
-
-        connection.query(query_found, (err, result) => {
-            result.map(e => list_of_found.push(e.item_id));
-
-            maxItr = list_of_lost.length + list_of_found.length;
-
-            for (let each of list_of_found) {
-                fetch('' + each, 0);
-            }
-
-            for (let each of list_of_lost) {
-                fetch('' + each, 1);
-            }
-
-        })
-    })
-})
-
-
 
 let scanInterval = {};
 let current_qrid = 1;
