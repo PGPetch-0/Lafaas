@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const { Expo } = require('expo-server-sdk');
 const mysql = require('mysql2');
 const { expo } = new Expo();
-let expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN });
 const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
