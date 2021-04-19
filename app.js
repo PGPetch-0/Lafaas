@@ -385,6 +385,8 @@ function match (item_id,type) {
                                     let diff = colordiff.compare(color,c);
                                     tempArr.push(diff);
                                 })
+                                let minDiff = Math.min.apply(Math, tempArr.map(function(item) { return item; }))
+                                tempArr = tempArr.filter(a => a == minDiff);
                                 console.log(tempArr);
                             }
                             let calcDiff = 0;
