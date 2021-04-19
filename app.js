@@ -36,19 +36,18 @@ app.use(bodyParser.urlencoded( {extended: true} ));
 const upload = multer({
     storage: multerS3({
         s3: new AWS.S3({
-            endpoint: new AWS.Endpoint('nyc3.digitaloceanspaces.com'),
-            accessKeyId: 'C7RMAXBJ5FFM7XVT2E5E',
-            secretAccessKey: 'Nde/mtwFsgfo/EwBsviLTLmn+3MOWfADjuCabko9INE'
+            endpoint: new AWS.Endpoint('sgp1.digitaloceanspaces.com'),
+            accessKeyId: 'IYPRQHXRZWAWAGESDSXF',
+            secretAccessKey: 'dRxJKmHGgBckszvs70cxWpwf7OfEvX2I/yPWpUFsQd0'
         }),
-        bucket: 'lafaas-spaces',
+        bucket: 'lafaas-space',
         acl: 'public-read',
         contentType: multerS3.AUTO_CONTENT_TYPE,
-        key: function (req, file, cb) {
-            console.log("Uploaded file " + file.originalname);
-            cb(null, file.originalname); //use Date.now().toString() for unique file keys
+        key: (req, file, next) => {
+            next(null, Date.now() + '_' + file.originalname);
         }
     })
-}).array('upload', 1);
+});
 
 let connection = mysql.createConnection({
     host: "lafaas-db-do-user-8735555-0.b.db.ondigitalocean.com",
@@ -95,92 +94,93 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
         res.send('color missing');
     }
     if(req.body.type == 'found' ){
-        img_url = req.body.url;
         type = 0; //freshly registered item will always have type found. Cannot be reserved or claimed.
         device_token = req.body.device_token;
     }
-
-    //insert according to type
-    if(req.body.type == 'lost'){
-        if(colors.length >2) res.send("There can be at most 2 colors!");
-        var qrystr = "INSERT INTO `Items_lost`(item_name, location_lat, location_long, location_desc, description, category) VALUES('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
-        connection.query(qrystr,
-            function(err,results){
-                if(err) console.log(err);
-                getItemLostID(function(item_id){
-                    connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[0]], function(err,results){
-                        if(err) console.log(err);
-                        console.log("color1 got called");
-                    })
-                    if(colors.length==2){
-                        connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[1]], function(err,results){
+    upload.single('image'), function (req, res, next) {
+        console.log('item name: ' + req.body.item_name);
+        console.log('color: ' + req.body.color);
+        console.log('url: ' + req.file.location);
+        //insert according to type
+        if(req.body.type == 'lost'){
+            if(colors.length >2) res.send("There can be at most 2 colors!");
+            var qrystr = "INSERT INTO `Items_lost`(item_name, location_lat, location_long, location_desc, description, category) VALUES('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
+            connection.query(qrystr,
+                function(err,results){
+                    if(err) console.log(err);
+                    getItemLostID(function(item_id){
+                        connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[0]], function(err,results){
                             if(err) console.log(err);
-                            console.log("color2 got called");
+                            console.log("color1 got called");
                         })
-                    }
-                    const result = match(item_id,'lost');
-                    (async () => {
-                        const result = await match(item_id,'lost');
-                        console.log("result:",result);
-                        switch (result.code) {
+                        if(colors.length==2){
+                            connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[1]], function(err,results){
+                                if(err) console.log(err);
+                                console.log("color2 got called");
+                            })
+                        }
+                        const result = match(item_id,'lost');
+                        (async () => {
+                            const result = await match(item_id,'lost');
+                            console.log("result:",result);
+                            switch (result.code) {
                                 case 1:
                                     res.send(result.item);
                                 case 2:
                                     res.send(result.status);
+                            }
+                        })();
+                    })
+                }
+            );
+        }else if(req.body.type == 'found'){
+            var qrystr2 = "INSERT INTO `Items_found`(item_name, location_lat, location_long, location_desc, description, category, type, image_url, device_token) VALUES (?,?,?,?,?,?,?,?,?)";
+            var qryarr = [item_name, location_lat, location_long, location_desc, description, category, 0, req.file.location, device_token];
+            connection.query(
+            qrystr2, qryarr,
+                function(err,results){
+                    if(err) console.log(err);
+                    getItemFoundID(function(item_id){
+                        var i;
+                        for(i=0; i<colors.length; i++){
+                            connection.query("INSERT INTO `Items_found_color` (item_id, color) VALUES (?, ?)", [item_id, colors[i]], function(err,results){
+                                if(err) console.log(err);
+                                console.log("color got called: " +i);
+                            })
                         }
-                    })();
-                })
-            }
-        );
-    }else if(req.body.type == 'found'){
-        var qrystr2 = "INSERT INTO `Items_found`(item_name, location_lat, location_long, location_desc, description, category, type, image_url, device_token) VALUES (?,?,?,?,?,?,?,?,?)";
-        var qryarr = [item_name, location_lat, location_long, location_desc, description, category, 0, img_url, device_token];
-        connection.query(
-           qrystr2, qryarr,
-            function(err,results){
-                if(err) console.log(err);
-                getItemFoundID(function(item_id){
-                    var i;
-                    for(i=0; i<colors.length; i++){
-                        connection.query("INSERT INTO `Items_found_color` (item_id, color) VALUES (?, ?)", [item_id, colors[i]], function(err,results){
-                            if(err) console.log(err);
-                            console.log("color got called: " +i);
-                        })
-                    }
-                    (async () => {
-                        const result = await match(item_id,'found');
-                        console.log("result:",result);
-                        if(result.code == 0) {
-                            //set timer to one hour, if exceeds, delete entry
-                            //res QR data to frontend
-                            const qrid = current_qrid
-                            getQR(item_id,device_token,'found')
-                            .then((qr_id)=>{
-                                res.on('finish', () => {
-                                    const timer = setTimeout(() =>{ //timeout remove claim
-                                        console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [FOUND]`)
-                                        delete qrAvailable[qr_id]["scanInterval"]
-                                        connection.query(`DELETE FROM Items_found_color WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                                            console.log(`DELETE FROM Items_found_color item_id: ${qrAvailable[qrid]["itemID"]} row deleted: ` + result.affectedRows)
-                                            connection.query(`DELETE FROM Items_found WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                                                if(err) throw err;
-                                                console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                        (async () => {
+                            const result = await match(item_id,'found');
+                            console.log("result:",result);
+                            if(result.code == 0) {
+                                //set timer to one hour, if exceeds, delete entry
+                                //res QR data to frontend
+                                const qrid = current_qrid
+                                getQR(item_id,device_token,'found')
+                                .then((qr_id)=>{
+                                    res.on('finish', () => {
+                                        const timer = setTimeout(() =>{ //timeout remove claim
+                                            console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [FOUND]`)
+                                            delete qrAvailable[qr_id]["scanInterval"]
+                                            connection.query(`DELETE FROM Items_found_color WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                                console.log(`DELETE FROM Items_found_color item_id: ${qrAvailable[qrid]["itemID"]} row deleted: ` + result.affectedRows)
+                                                connection.query(`DELETE FROM Items_found WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                                    if(err) throw err;
+                                                    console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                                                })
                                             })
-                                        })
-                                    }, 20000);
-                                    qrAvailable[qr_id]["scanInterval"] = timer
-                                });                
-                                res.send(''+qr_id)
-                            }) 
-                        }
-                        
-                    })();
-                })
-                
-            }
-        );
-    }else{
-        res.send('type parameter error');
+                                        }, 20000);
+                                        qrAvailable[qr_id]["scanInterval"] = timer
+                                    });                
+                                    res.send(''+qr_id)
+                                }) 
+                            }
+                        })();
+                    })
+                }
+            );
+        }else{
+            res.send('type parameter error');
+        }
     }
 });
 
@@ -280,7 +280,7 @@ app.get('/item_reg', (req, res) => {
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc, 'color', color, 'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function (err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1 ORDER BY date_added ASC", function (err, results) {
         if (err) throw err;
         res.json(results[0]);
     });
@@ -337,6 +337,18 @@ app.post('/claim',(req, res) => { //type=== 'lost'
         }
     })
     //res.send(qr_id)
+})
+
+//Report
+app.get('/report', (req,res) =>{
+    const pid = req.query.pid;
+    const item_id = req.query.item_id;
+    const message = req.query.message;
+    const url = req.query.evidence_url;
+    var date = new Date().toISOString().slice(0, 10);
+    connection.query("INSERT INTO `Reports` (pid, item_id, message, evidence_url, date_reported) VALUES (" + pid + ", '"+item_id+"', '"+message+"', '"+url+"',"+date+")", function(err,result){
+        if(err) console.log()
+    })
 })
 
 //Matching, to be called by registerItem
