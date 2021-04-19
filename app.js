@@ -147,15 +147,34 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
                             console.log("color got called: " +i);
                         })
                     }
-                    const result = match(item_id,'found');
-                    if(result.code == 0) {
-                        (async () => {
-                            const result = await match(item_id,'found');
-                            console.log("result:",result);
-                            //if(result.code == 0) res.send("yo");
-                            //will request qr
-                        })();
-                    }
+                    (async () => {
+                        const result = await match(item_id,'found');
+                        console.log("result:",result);
+                        if(result.code == 0) {
+                            //set timer to one hour, if exceeds, delete entry
+                            //res QR data to frontend
+                            const qrid = current_qrid
+                            getQR(item_id,device_token,'found')
+                            .then((qr_id)=>{
+                                res.on('finish', () => {
+                                    const timer = setTimeout(() =>{ //timeout remove claim
+                                        console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [FOUND]`)
+                                        delete qrAvailable[qr_id]["scanInterval"]
+                                        connection.query(`DELETE FROM Items_found_color WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                            console.log(`DELETE FROM Items_found_color item_id: ${qrAvailable[qrid]["itemID"]} row deleted: ` + result.affectedRows)
+                                            connection.query(`DELETE FROM Items_found WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                                if(err) throw err;
+                                                console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                                            })
+                                        })
+                                    }, 20000);
+                                    qrAvailable[qr_id]["scanInterval"] = timer
+                                });                
+                                res.send(''+qr_id)
+                            }) 
+                        }
+                        
+                    })();
                 })
                 
             }
@@ -168,7 +187,7 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
 app.get('/noti', (req, res) => {
 
     const chunks = expo.chunkPushNotifications([
-        { to: "ExponentPushToken[qPdMFxC5qgVRvhvSPm-XMn]", sound: "default", body: req.query.msg }
+        { to: "ExponentPushToken["+req.query.noti_token+"]", sound: "default", body: req.query.msg }
     ]);
 
     for (let each of chunks) {
@@ -265,6 +284,7 @@ app.get('/item_claimed', (req, res) => {
         res.json(results[0]);
     });
 });
+
 app.post('/claim',(req, res) => { //type=== 'lost'
     const pid = req.body.pid
     const found_id = req.body.item_id
@@ -279,7 +299,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
             res.send("Item is claimed, Can't Claim this")
         }
         else{
-            connection.query(`SELECT item_id, module_id,current_location,noti_token FROM Stores, Persons WHERE item_id = ${found_id} AND pid = ${pid}`,(err,result)=>{
+            connection.query(`SELECT item_id, module_id,noti_token FROM Stores, Persons WHERE item_id = ${found_id} AND pid = ${pid}`,(err,result)=>{
                 if(result.length !== 0 ){
                     connection.query(`INSERT INTO Claims (item_id, national_id, tel) VALUE(${found_id},${national_id},${tel})`,(err,result)=>{
                         if(err) throw err; 
@@ -293,15 +313,15 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                     res.send(`no found item id: ${found_id} in the database`)
                 }
                 const storeInfo = result[0] 
-                getQR(storeInfo.item_id,storeInfo.current_location,storeInfo.noti_token,'lost',storeInfo.module_id)
+                getQR(storeInfo.item_id,storeInfo.noti_token,'lost',storeInfo.module_id)
                 .then((qr_id)=>{
                     res.on('finish', () => {
                         const timer = setTimeout(() =>{ //timeout remove claim
-                            console.log(`Timer is end for qr_id: ${qrid}`)
+                            console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [LOST]`)
                             delete qrAvailable[qr_id]["scanInterval"]
                             connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                                 if(err) throw err;
-                                console.log(`DELETE FROM Claim item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                                console.log(`DELETE FROM Claims item_id: ${qrAvailable[qrid]["itemID"]}`)  
                             })
                             connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
                                 if(err) throw err;
@@ -309,7 +329,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                             })
                         }, 20000);
                         qrAvailable[qr_id]["scanInterval"] = timer
-                    });
+                    });                
                     res.send(''+qr_id)
                 })
             })
@@ -480,13 +500,13 @@ let current_qrid = 1;
  * @returns qr_id
  */
 
-async function getQR(item_id,item_current_location,device_token,type,module_id) { //for frontend client
+async function getQR(item_id,device_token,type,module_id) { //for frontend client
     const return_qr = current_qrid
     current_qrid++;
     if(type === 'found' && typeof module_id === 'undefined')
         module_id = await getModuleID(item_id) //getModuleID(item_current_location) // moduleid will never be null at return
     const timestamp = Date.now();
-    const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "timestamp": timestamp, "scanInterval": null }
+    const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": module_id.substring(0,4), "deviceToken": device_token, "timestamp": timestamp, "scanInterval": null }
     qrAvailable[return_qr] = QRdata
     return return_qr;
 }
@@ -510,7 +530,7 @@ async function getModuleID(item_id){
     var retlocker = lockersWithDistance.find(function(locker){ return (locker.distance == shortestDistance && locker.vacancy == 0); })
     console.log("Closest Available Locker: "+retlocker.module_id);
     return retlocker.module_id
-  } 
+} 
 
 app.get('/requestQRdata', (req, res) => { //for frontend client
     const item_id = req.query.item_id;
