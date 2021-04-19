@@ -118,12 +118,7 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
                         (async () => {
                             const result = await match(item_id,'lost');
                             console.log("result:",result);
-                            switch (result.code) {
-                                case 1:
-                                    res.send(result.item);
-                                case 2:
-                                    res.send(result.status);
-                            }
+                            res.send(result);
                         })();
                     })
                 }
@@ -429,7 +424,7 @@ function match (item_id,type) {
                         if(resultArr.length != 0 && type == 'lost') {
                             resolve({code:1, status: '[Lost] Match found', item: resultArr});
                         } else if(resultArr.length == 0 && type == 'lost'){
-                            resolve({code:2, status: '[Lost] Match not found'});
+                            resolve({code:2, status: '[Lost] Match not found', item: resultArr});
                         } else if(type == 'found') {
                             resolve({code:0, status: '[Found] Req locker', item: resultArr});
                         }
