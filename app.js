@@ -174,47 +174,6 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
         }
 });
 
-app.get('/noti', (req, res) => {
-    // const chunks = expo.chunkPushNotifications([
-    //     { to: "ExponentPushToken["+req.query.noti_token+"]", sound: "default", body: req.query.msg }
-    // ]);
-
-    // for (let each of chunks) {
-    //     expo.sendPushNotificationsAsync(each)
-    // }
-    // res.send("Done");
-
-    let messages = [{
-        to : "ExponentPushToken["+req.query.noti_token+"]",
-        sound: "default",
-        title: "this should be the title",
-        body: "this is the small text right?",
-        data : {
-            msg: "idk why we are going so deep in JSON format i'm dizzy"
-        }
-    }];
-    let chunks = expo.chunkPushNotifications(messages);
-    let tickets = [];
-    (async () => {
-        // Send the chunks to the Expo push notification service. There are
-        // different strategies you could use. A simple one is to send one chunk at a
-        // time, which nicely spreads the load out over time:
-        for (let chunk of chunks) {
-          try {
-            let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-            console.log(ticketChunk);
-            tickets.push(...ticketChunk);
-            // NOTE: If a ticket contains an error code in ticket.details.error, you
-            // must handle it appropriately. The error codes are listed in the Expo
-            // documentation:
-            // https://docs.expo.io/push-notifications/sending-notifications/#individual-errors
-          } catch (error) {
-            console.error(error);
-          }
-        }
-    })();
-});
-
 app.post('/createuser', (req, res) => {
     connection.query("SELECT * FROM Persons WHERE username = '" + req.body.user + "' ORDER BY username LIMIT 1", function (err, results, fields) {
         if (err) {
@@ -691,4 +650,38 @@ function getItemFoundID(callback) {
         if (err) console.log(err);
         callback(rows[0].max_item_id);
     })
+}
+
+//notification funciton
+function noti(messages){ // msg needs to be in complete format laew na
+    // message format
+    // messages = [{
+    //     to : "ExponentPushToken[tokenstring]",
+    //     sound: "default",
+    //     title: "this should be the title",
+    //     body: "this is the small text right?",
+    //     data : {
+    //         msg: "idk why we are going so deep in JSON format i'm dizzy"
+    //     }
+    // }]; 
+    let chunks = expo.chunkPushNotifications(messages);
+    let tickets = [];
+    (async () => {
+        // Send the chunks to the Expo push notification service. There are
+        // different strategies you could use. A simple one is to send one chunk at a
+        // time, which nicely spreads the load out over time:
+        for (let chunk of chunks) {
+          try {
+            let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+            console.log(ticketChunk);
+            tickets.push(...ticketChunk);
+            // NOTE: If a ticket contains an error code in ticket.details.error, you
+            // must handle it appropriately. The error codes are listed in the Expo
+            // documentation:
+            // https://docs.expo.io/push-notifications/sending-notifications/#individual-errors
+          } catch (error) {
+            console.error(error);
+          }
+        }
+    })();
 }
