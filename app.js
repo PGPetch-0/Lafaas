@@ -270,7 +270,7 @@ app.get('/item_reg', (req, res) => {
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 1", function (err, results) {
+    connection.query("SELECT JSON_ARRAYAGG(JSON_OBJECT('name', item_name, 'item_id', item_id, 'location', location_desc,  'description', description, 'image', image_url))  AS 'Claimed' FROM Items_found WHERE type = 2", function (err, results) {
         if (err) throw err;
         console.log(results);
         res.json(results[0]);
