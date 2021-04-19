@@ -83,7 +83,7 @@ app.post('/registeritem', (req,res) =>{ // upload picture left
     var category = req.body.category; 
     var description = req.body.description;
     //color for 2nd table
-    var colors = req.body.color.split(','); // sent as string of colors divided by ,
+    var colors = req.body.color;
     //variables for Items_found
     var type;
     var img_url;
