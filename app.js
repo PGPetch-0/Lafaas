@@ -416,7 +416,7 @@ function match (item_id,type) {
                         console.log(resultArr);
                         //match
                         resultArr.forEach(item => {
-                            let score = (0.3*(item.distance/2))+(0.7*(1-item.StringSim)); 
+                            let score = (0.3*(item.distance))+(0.7*(1-item.StringSim)); 
                             Object.assign(item, { 'weightedScore':score });
                             console.log(item)
                         })
