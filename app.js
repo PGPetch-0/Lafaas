@@ -659,9 +659,12 @@ function noti(messages){ // msg needs to be in complete format laew na
     //     to : "ExponentPushToken[tokenstring]",
     //     sound: "default",
     //     title: "this should be the title",
-    //     body: "this is the small text right?",
+    //     body: "this is the small text",
     //     data : {
-    //         msg: "idk why we are going so deep in JSON format i'm dizzy"
+    //         msg: "idk why we are going so deep in JSON format i'm dizzy",
+    //         id: pid or item_id can go here,
+    //         description: "item description",
+    //         you get the idea, put your data here
     //     }
     // }]; 
     let chunks = expo.chunkPushNotifications(messages);
