@@ -576,7 +576,7 @@ app.get('/recpwd', (req, res) => {
             from: 'lafaaschula@gmail.com',
             to: email,
             subject: 'Your Temporary Password',
-            text: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+            text: connection.query(`SELECT 'password' FROM Persons WHERE email=?`, [email])
         }
         transporter.sendMail(mailOptions, function(err, results) {
             if (err) {
