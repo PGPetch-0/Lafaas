@@ -572,11 +572,17 @@ app.get('/recpwd', (req, res) => {
             message: "There are no account with this email!"
         });
     } else {
+        const newPassword = Math.random().toString(36).substring(2, 15);
+        console.log(newPassword); 
+        connection.query(`UPDATE Persons SET password=? WHERE email=?`, [newPassword, email], (err, results) => {
+            if (err) throw err;
+            console.log('set');
+        });
         const mailOptions = {
             from: 'lafaaschula@gmail.com',
             to: email,
-            subject: 'Your Temporary Password',
-            text: connection.query(`SELECT 'password' FROM Persons WHERE email=?`, [email])
+            subject: 'Your New Password',
+            text: 'This is your new password 🌈 :  '+newPassword
         }
         transporter.sendMail(mailOptions, function(err, results) {
             if (err) {
