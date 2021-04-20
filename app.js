@@ -161,7 +161,7 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
                                         }, 300000);
                                         qrAvailable[qr_id]["scanInterval"] = timer
                                     });                
-                                    res.send(''+qr_id)
+                                    res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
                                 }) 
                             }
                         })();
@@ -391,7 +391,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                         }, 60000);
                         qrAvailable[qr_id]["scanInterval"] = timer
                     });                
-                    res.send(''+qr_id)
+                    res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
                 })
             })
         }
@@ -569,7 +569,7 @@ async function getQR(item_id,device_token,type,module_id) { //for frontend clien
     if(type === 'found' && typeof module_id === 'undefined')
         module_id = await getModuleID(item_id) //getModuleID(item_current_location) // moduleid will never be null at return
     const timestamp = Date.now();
-    const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": module_id.substring(0,4), "deviceToken": device_token, "timestamp": timestamp, "scanInterval": null }
+    const QRdata = {"type": type,"moduleID": module_id, "itemID": item_id, "location": module_id.substring(0,4), "deviceToken": device_token, "timestamp": timestamp, "cancel": false, "scanInterval": null }
     qrAvailable[return_qr] = QRdata
     return return_qr;
 }
@@ -595,80 +595,126 @@ async function getModuleID(item_id){
     return retlocker.module_id
 } 
 
-app.get('/requestQRdata', (req, res) => { //for frontend client
-    const item_id = req.query.item_id;
-    const device_token = req.query.device_token;
-    const type = req.query.type;
-    const item_current_location = req.query.item_current_location;
+// app.get('/requestQRdata', (req, res) => { //for frontend client
+//     const item_id = req.query.item_id;
+//     const device_token = req.query.device_token;
+//     const type = req.query.type;
+//     const item_current_location = req.query.item_current_location;
 
-    res.on('finish', () => {
-        const timer = setTimeout(() =>{
-            console.log(`Timer is end ${device_token}`)
-            delete scanInterval[device_token]
-        }, 3600000);
-        scanInterval[device_token] = timer;
-    });
+//     res.on('finish', () => {
+//         const timer = setTimeout(() =>{
+//             console.log(`Timer is end ${device_token}`)
+//             delete scanInterval[device_token]
+//         }, 3600000);
+//         scanInterval[device_token] = timer;
+//     });
 
-    const module_ID = 'ENG101' //getModuleID(item_current_location)
-    const timestamp = Date.now();
-    const QRdata = { "type": type,"moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
-    res.json(QRdata);
-})
+//     const module_ID = 'ENG101' //getModuleID(item_current_location)
+//     const timestamp = Date.now();
+//     const QRdata = { "type": type,"moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
+//     res.json(QRdata);
+// })
 
+/* 
+{
+   {
+  1 : {
+    type: 'lost',
+    moduleID: 'ENG101',
+    itemID: 1,
+    location: 'ENG1',
+    deviceToken: 'test',
+    timestamp: 1618725018469,
+    scanInterval: null
+  }
+}
+*/
 app.get('/informClient', (req, res) => { //for hardware
-    const token = req.query.token; //noti_token
-    const msgfromHardware = req.query.msg;
-    const module_id= req.query.module_id;
-    const type = req.query.type;
+    const req_qr = req.query.qrid;
+    const msgfromHardware = req.query.msg
     const today = new Date();
-    const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate(); 
     switch (msgfromHardware) {
         case `stopTimer`:
-            if (scanInterval[token]) { //timer is running
-                clearTimeout(scanInterval[token]); //stop then delete
-                delete scanInterval[token];
-                console.log('QRisValid: '+token)
-                if (type === 'found'){
-                    //noti user[token] `module: ${module_id} is opened`
-                    console.log('Open module ' + module_id)
-                    res.json({'openModule': module_id, 'type': type, 'device_token': token});
+            if(qrAvailable[req_qr]){
+                if (qrAvailable[req_qr]["scanInterval"]) { //timer is running
+                    clearTimeout(qrAvailable[req_qr]["scanInterval"]); //stop then delete
+                    delete qrAvailable[req_qr]["scanInterval"];
+                    console.log('QRisValid: '+req_qr)
+                    if (qrAvailable[req_qr]["type"] === 'found'){
+                        //noti user[token] `module: ${module_id} is opened`
+                        console.log('Open module ' + qrAvailable[req_qr]["moduleID"])
+                        res.json({'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] });
+                    }
+                    else if(qrAvailable[req_qr]["type"] === 'lost'){
+                        //noti[token] 'scanFinger'
+                        res.json({'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] })
+                    }
+                } else { //timeout or invalid
+                    //noti user[token] QrExpire
+                    res.send('InvalidQR: '+req_qr);
                 }
-                else if(type === 'lost'){
-                    //noti[token] 'scanFinger'
-                    res.json({'scanFingerprint': token, 'openModule': module_id, 'type': type })
-                }
-            } else { //timeout or invalid
-                //noti user[token] QrExpire
-                res.send('ExpireNotiSentTo: '+token);
+            }else{
+                res.send({'invalidQR': req_qr})
             }
         break;
         case 'WrongStation':
                 //noti user[token] WrongStation
-                res.send('WrongStationNotiSentTo: '+token) 
+                res.send('WrongStationNotiSentTo: '+qrAvailable[req_qr]["deviceToken"]) 
         break;
         case 'QrExpire':
                 //noti user[token] QrExpire
-                res.send('ExpireNotiSentTo: '+ token) 
+                res.send('ExpireNotiSentTo: '+ qrAvailable[req_qr]["deviceToken"]) 
         break;
         case 'moduleClosed':
+            const type = req.query.type
+            const device_token = req.query.token
+            const module_id = req.query.module_id
+            const item_id = req.query.item_id
             if (type === 'found'){
-                //update vacancy
-                    // let sql = `INSERT INTO Stores `
-                    // connection.query()
                 //update store
+                let sql = `INSERT INTO Stores(item_id,module_id,date_added,current_location) VALUES (${item_id},${module_id},'${date}',${module_id.substring(0,4)})`
+                connection.query(sql,(err,result)=>{
+                    if (err) throw err;
+                    console.log(`INSERT INTO Stores with item_id: ${item_id}, module_id: ${module_id}`)
+                })
+                //update vacancy
+                let sql2 = `UPDATE Lockers SET vacancy = 1 WHERE module_id = ${module_id}`
+                connection.query(sql2,(err,result)=>{
+                    if (err) throw err;
+                    console.log(`UPDATE vacancy module_id: ${module_id}`)
+                })
+                //noti user found item is stored successfully
+                res.send({"moduleID": module_id, "vacancy": 1})
             }
             if (type === 'lost'){
-                //update vacancy
-                    // let sql = `INSERT INTO Stores `
-                    // connection.query()
-                //update store
-                //change item type=> claimed
+                const fingerprint = req.query.fingerUrl
+                connection.query(`SELECT type FROM Items_found WHERE item_id=${item_id}`,(err,result)=>{
+                    if (err) throw err;
+                    console.log(typeof result[0].type)
+                    console.log(result[0])
+                    if (result[0].type == 1){ //not cancel
+                        let sql = `UPDATE Claims SET module_id = '${module_id}', fingerprint = '${fingerprint}', date_claimed = '${date}' WHERE item_id = ${item_id}`
+                        connection.query(sql,(err,result)=>{
+                            if (err) throw err;
+                            console.log(`UPDATE Claim with moduleID: ${module_id}, fingerprint = ${fingerprint}, date_claimed = ${date}`)
+                        })
+                        connection.query(`UPDATE Items_found SET type = 2 WHERE item_id = ${item_id}`,(err,result)=>{
+                            if(err) throw err;
+                            console.log(`CLAIMED Item_found item_id: ${item_id} from reserved --> claimed`) //set type back to registered  
+                        })
+                        connection.query(`UPDATE Stores SET module_id = null WHERE item_id= ${item_id}`,(err,result)=>{
+                            if(err) throw err;
+                            console.log(`REMOVE from Stores, module_id of item_id=${item_id}`)
+                        })
+                        //send noti claim successfully
+                        res.send({"moduleID": module_id, "vacancy": 0})
+                    }else{
+                        //send noti claim canceled
+                        res.send({"moduleID": module_id, "vacancy": 1})
+                    }
+                })  
             }
-            res.send('SuccessNotiSentTo: '+ token) // updated vacancy status
-        break;
-        case 'cancelClaim': //need fix wrong algo: client send this not hardware 
-                //change item type=> registered
-                res.send('ClaimCancelNotiSentTo: '+ token) 
         break;
         default:
                 res.send('Invalid Message')
@@ -677,17 +723,44 @@ app.get('/informClient', (req, res) => { //for hardware
     
 })
 
-app.post('/uploadFingerprint', (req,res)=>{
-    const fingerprint = req.body.fingerprint;
+app.get('/cancelClaim',(req,res)=>{
+    const req_qr = req.query.qr_id
+    if(qrAvailable[req_qr]){
+        if(qrAvailable[req_qr]["cancel"] === false){
+            qrAvailable[req_qr]["cancel"] = true
+            console.log("==========================================")
+            console.log(`cancel claim qr_id ${req_qr}`)
+            connection.query(`DELETE FROM Claims WHERE item_id = ${qrAvailable[req_qr]["itemID"]}`,(err,result)=>{
+                if(err) throw err;
+                console.log(`DELETE FROM Claims item_id: ${qrAvailable[req_qr]["itemID"]}`)  
+            })
+            connection.query(`UPDATE Items_found SET type = 0 WHERE item_id = ${qrAvailable[req_qr]["itemID"]}`,(err,result)=>{
+                if(err) throw err;
+                console.log(`RESET Item_found item_id: ${qrAvailable[req_qr]["itemID"]} from reserved --> registered`) //set type back to registered  
+                console.log("==========================================")
+            })
+            //send noti claim cancel pls put the item back and shut the door
+            res.send(`claim qr id: ${req_qr}, cancel`)
+        }
+        else{
+            res.send("already cancel, aborting")
+        }   
+    }
+    else
+        res.send("invalid qrid for cancel claim")
+})
+
+app.post('/uploadFingerprint', upload.single('image'), (req,res)=>{
+    const fingerprint = req.file.location;
     const module_id = req.body.module_id;
     const type = req.body.type;
     const device_token = req.body.device_token;
     //upload fingerprint
     const record= true; //success store fingerprint
     //if(err) throw err
-    if (record){
+    if (fingerprint){
         console.log('Open module ' + module_id)
-        res.json({'openModule': module_id, 'type': type, 'device_token': device_token});
+        res.json({'openModule': module_id, 'type': type, 'device_token': device_token, 'fingerprintUrl': fingerprint});
     }
 })
 
