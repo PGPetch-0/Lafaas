@@ -551,6 +551,49 @@ app.get('/useredit', (req, res) => {
     }
 });
 
+//PWD Recovery
+//1. npm install nodemailer
+//2. npm install nodemailer-smtp-transport
+var nodemailer = require('nodemailer');
+var smtpTransport = require('nodemailer-smtp-transport');
+
+app.get('/recpwd', (req, res) => {
+    const transporter = nodemailer.createTransport(smtpTransport({
+        service: 'gmail', 
+        host: 'stmp.gmail.com',
+        auth: {
+            user: 'lafaaschula@gmail.com',
+            pass: 'Lafaas2021'
+        }
+    }));
+    var email = req.query.email;
+    if (connection.query(`SELECT 'email' FROM Persons WHERE email=?`, [email]) == null) {
+        res.json({
+            message: "There are no account with this email!"
+        });
+    } else {
+        const newPassword = Math.random().toString(36).substring(2, 15);
+        console.log(newPassword); 
+        connection.query(`UPDATE Persons SET password=? WHERE email=?`, [newPassword, email], (err, results) => {
+            if (err) throw err;
+            console.log('set');
+        });
+        const mailOptions = {
+            from: 'lafaaschula@gmail.com',
+            to: email,
+            subject: 'Your New Password',
+            text: 'This is your new password 🌈 :  '+newPassword
+        }
+        transporter.sendMail(mailOptions, function(err, results) {
+            if (err) {
+                console.error(err);
+            } else {
+                console.log(results);
+            }
+        });
+    }
+});
+
 let scanInterval = {};
 let current_qrid = 1;
 /**
