@@ -631,36 +631,37 @@ async function getModuleID(item_id){
 */
 app.get('/informClient', (req, res) => { //for hardware
     const req_qr = req.query.qrid;
+    const req_module = req.query.moduleID
     const msgfromHardware = req.query.msg
     const today = new Date();
     const date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate(); 
     switch (msgfromHardware) {
         case `stopTimer`:
             if(qrAvailable[req_qr]){
-                if (qrAvailable[req_qr]["scanInterval"]) { //timer is running
-                    clearTimeout(qrAvailable[req_qr]["scanInterval"]); //stop then delete
-                    delete qrAvailable[req_qr]["scanInterval"];
-                    console.log('QRisValid: '+req_qr)
-                    if (qrAvailable[req_qr]["type"] === 'found'){
-                        //noti user[token] `module: ${module_id} is opened`
-                        console.log('Open module ' + qrAvailable[req_qr]["moduleID"])
-                        res.json({'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] });
+                if(qrAvailable[req_qr]["location"]!== req_module){
+                    if (qrAvailable[req_qr]["scanInterval"]) { //timer is running
+                        clearTimeout(qrAvailable[req_qr]["scanInterval"]); //stop then delete
+                        delete qrAvailable[req_qr]["scanInterval"];
+                        console.log('QRisValid: '+req_qr)
+                        if (qrAvailable[req_qr]["type"] === 'found'){
+                            //noti user[token] `module: ${module_id} is opened`
+                            console.log('Open module ' + qrAvailable[req_qr]["moduleID"])
+                            res.json({'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] });
+                        }
+                        else if(qrAvailable[req_qr]["type"] === 'lost'){
+                            //noti[token] 'scanFinger'
+                            res.json({'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] })
+                        }
+                    } else { //timeout or invalid
+                        //noti user[token] QrExpire
+                        res.send({'response': 'QR expire '+req_qr});
                     }
-                    else if(qrAvailable[req_qr]["type"] === 'lost'){
-                        //noti[token] 'scanFinger'
-                        res.json({'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] })
-                    }
-                } else { //timeout or invalid
-                    //noti user[token] QrExpire
-                    res.send('InvalidQR: '+req_qr);
+                }else{
+                    res.send({'response': 'wrongStation'+ req_qr})
                 }
             }else{
-                res.send({'invalidQR': req_qr})
+                res.send({'response': 'invalidQR'+req_qr})
             }
-        break;
-        case 'WrongStation':
-                //noti user[token] WrongStation
-                res.send('WrongStationNotiSentTo: '+qrAvailable[req_qr]["deviceToken"]) 
         break;
         case 'QrExpire':
                 //noti user[token] QrExpire
