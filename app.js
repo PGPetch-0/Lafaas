@@ -158,7 +158,7 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
                                                     console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
                                                 })
                                             })
-                                        }, 300000);
+                                        }, 3600000);
                                         qrAvailable[qr_id]["scanInterval"] = timer
                                     });                
                                     res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
@@ -388,7 +388,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                                 if(err) throw err;
                                 console.log(`RESET Item_found item_id: ${qrAvailable[qrid]["itemID"]} from reserved --> registered`) //set type back to registered  
                             })
-                        }, 60000);
+                        }, 3600000);
                         qrAvailable[qr_id]["scanInterval"] = timer
                     });                
                     res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
