@@ -717,7 +717,7 @@ app.get('/informClient', (req, res) => { //for hardware
             const item_id = req.query.item_id
             if (type === 'found'){
                 //update store
-                let sql = `INSERT INTO Stores(item_id,module_id,date_added,current_location) VALUES (${item_id},'${module_id}','${date}',${module_id.substring(0,4)})`
+                let sql = `INSERT INTO Stores(item_id,module_id,date_added,current_location) VALUES (${item_id},'${module_id}','${date}','${module_id.substring(0,4)}')`
                 connection.query(sql,(err,result)=>{
                     if (err) throw err;
                     console.log(`INSERT INTO Stores with item_id: ${item_id}, module_id: ${module_id}`)
