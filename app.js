@@ -681,7 +681,7 @@ app.get('/informClient', (req, res) => { //for hardware
     switch (msgfromHardware) {
         case `stopTimer`:
             if(qrAvailable[req_qr]){
-                if(qrAvailable[req_qr]["location"]!== req_module){
+                if(qrAvailable[req_qr]["location"]=== req_module){
                     if (qrAvailable[req_qr]["scanInterval"]) { //timer is running
                         clearTimeout(qrAvailable[req_qr]["scanInterval"]); //stop then delete
                         delete qrAvailable[req_qr]["scanInterval"];
@@ -689,11 +689,11 @@ app.get('/informClient', (req, res) => { //for hardware
                         if (qrAvailable[req_qr]["type"] === 'found'){
                             //noti user[token] `module: ${module_id} is opened`
                             console.log('Open module ' + qrAvailable[req_qr]["moduleID"])
-                            res.json({'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] });
+                            res.json({'response':{'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] }});
                         }
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
-                            res.json({'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] })
+                            res.json({'response':{'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] }})
                         }
                     } else { //timeout or invalid
                         //noti user[token] QrExpire
@@ -761,7 +761,7 @@ app.get('/informClient', (req, res) => { //for hardware
             }
         break;
         default:
-                res.send('Invalid Message')
+                res.send({'response': 'Invalid Message'})
             break;
     }
     
