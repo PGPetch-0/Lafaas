@@ -306,42 +306,20 @@ app.get('/myregister', (req, res) => {
 //Item Reg
 app.get('/item_reg', (req, res) => {
     const token = req.query.token;
-    let item_list;
 
-    connection.query("SELECT * FROM Items_found WHERE type = 0 AND device_token != '" + token + "'", (err, result) => {
-        item_list = result;
+    connection.query("SELECT F.*, GROUP_CONCAT(color SEPARATOR ', ') AS color FROM Items_found_color FC, Items_found F WHERE F.item_id = FC.item_id AND type = 0 AND device_token != '" + token + "' GROUP BY item_id", (err, result) => {
 
-        if (item_list.length === 0) res.json([]);
-
-        for (let i = 0; i < item_list.length; i++) {
-            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
-                const colors = result.map(e => e.color);
-                item_list[i].color = colors.toString();
-
-                if (i === item_list.length - 1) res.json(item_list);
-            });
-        }
+        res.json(result);
 
     })
 });
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    let item_list;
 
-    connection.query("SELECT * FROM Items_found WHERE type = 2", (err, result) => {
-        item_list = result;
+    connection.query("SELECT F.*, GROUP_CONCAT(color SEPARATOR ', ') AS color FROM Items_found_color FC, Items_found F WHERE F.item_id = FC.item_id AND type = 2 GROUP BY item_id", (err, result) => {
 
-        if (item_list.length === 0) res.json([]);
-
-        for (let i = 0; i < item_list.length; i++) {
-            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
-                const colors = result.map(e => e.color);
-                item_list[i].color = colors.toString();
-
-                if (i === item_list.length - 1) res.json(item_list);
-            });
-        }
+        res.json(result);
 
     })
 });
