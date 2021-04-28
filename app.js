@@ -711,6 +711,14 @@ app.get('/informClient', (req, res) => { //for hardware
                             if(err) throw err;
                             console.log(`REMOVE from Stores, module_id of item_id=${item_id}`)
                         })
+                        let sql2 = `UPDATE Lockers SET vacancy = 0 WHERE module_id = '${module_id}'`
+                        connection.query(sql2,(err,result)=>{
+                            if (err) throw err;
+                            console.log(`UPDATE vacancy module_id: ${module_id}`)
+                        })
+                        
+                        
+
                         //send noti claim successfully
                         res.send({"moduleID": module_id, "vacancy": 0})
                     }else{
