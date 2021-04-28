@@ -248,100 +248,60 @@ app.get('/db', (req, res) => { // used to check content of table
 app.get('/myregister', (req, res) => {
     const token = req.query.token;
 
-    const query_lost = "SELECT Items_lost.item_id FROM Items_lost, Loses, Persons WHERE Items_lost.item_id = Loses.item_id AND Loses.pid = Persons.pid AND Persons.noti_token = '" + token + "'";
-    const query_found = "SELECT item_id FROM Items_found WHERE device_token = '" + token + "'";
+    let selection, source, condition, option;
+    //Lost Item Query
+    selection = "SELECT T.*, GROUP_CONCAT(TC.color SEPARATOR ',') AS color ";
+    source = "FROM Items_lost T, Items_lost_color TC, Loses L, Persons P ";
+    condition = "WHERE T.item_id = L.item_id AND L.pid = P.pid AND T.item_id = TC.item_id AND P.noti_token = '" + token + "' ";
+    option = "GROUP BY item_id";
+    const query_lost = selection + source + condition + option;
 
-    let list_of_lost = [];
-    let list_of_found = [];
-    let list_of_item = [];
+    //Found Item Query
+    selection = "SELECT T.*, GROUP_CONCAT(TC.color SEPARATOR ',') AS color ";
+    source = "FROM Items_found T, Items_found_color TC ";
+    condition = "WHERE T.item_id = TC.item_id AND T.device_token = '" + token + "' ";
+    option = "GROUP BY item_id";
+    const query_found = selection + source + condition + option;
 
-    let iteration = 0;
-    let max_iteration = 0;
 
-    const fetch = async (item_id, t) => {
-        let item;
-        let colors = [];
-        const type = t === 0 ? "Found" : "Lost";
-
-        const query_item = "SELECT * FROM Items_" + type.toLowerCase() + " WHERE item_id=" + item_id;
-        const query_color = "SELECT * FROM Items_" + type.toLowerCase() + "_color WHERE item_id=" + item_id
-
-        connection.query(query_item, (err, result) => {
-            item = result[0];
-            connection.query(query_color, (err, result) => {
-                result.map(e => colors.push(e.color));
-
-                item.color = colors.toString();
-                item.type = type;
-                iteration++;
-
-                list_of_item.push(item);
-                if (iteration == max_iteration) res.json(list_of_item);
-            });
-        });
-    };
-
+    let data = [];
     connection.query(query_lost, (err, result) => {
-        result.map(e => list_of_lost.push(e.item_id));
+
+        result.forEach(e => {
+            e.type = 'Lost';
+            data.push(e);
+        })
 
         connection.query(query_found, (err, result) => {
-            result.map(e => list_of_found.push(e.item_id));
 
-            max_iteration = list_of_lost.length + list_of_found.length;
+            result.forEach(e => {
+                e.type = 'Found';
+                data.push(e);
+            })
 
-            if (max_iteration === 0) res.json([]);
-
-            for (let each of list_of_found) {
-                fetch(each, 0);
-            }
-
-            for (let each of list_of_lost) {
-                fetch(each, 1);
-            }
+            res.json(data);
         })
-    })
 
+    })
 })
 
 //Item Reg
 app.get('/item_reg', (req, res) => {
     const token = req.query.token;
-    let item_list;
 
-    connection.query("SELECT * FROM Items_found WHERE type = 0 AND device_token != '" + token + "'", (err, result) => {
-        item_list = result;
+    connection.query("SELECT F.*, GROUP_CONCAT(color SEPARATOR ',') AS color FROM Items_found_color FC, Items_found F WHERE F.item_id = FC.item_id AND type = 0 AND device_token != '"+ token +  "' GROUP BY item_id", (err, result) => {
 
-        if (item_list.length === 0) res.json([]);
-
-        for (let i = 0; i < item_list.length; i++) {
-            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
-                const colors = result.map(e => e.color);
-                item_list[i].color = colors.toString();
-
-                if (i === item_list.length - 1) res.json(item_list);
-            });
-        }
+        res.json(result);
 
     })
 });
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-    let item_list;
 
-    connection.query("SELECT * FROM Items_found WHERE type = 2", (err, result) => {
-        item_list = result;
+    connection.query("SELECT F.*, GROUP_CONCAT(color SEPARATOR ',') AS color FROM Items_found_color FC, Items_found F WHERE F.item_id = FC.item_id AND type = 2 GROUP BY item_id", (err, result) => {
 
-        if (item_list.length === 0) res.json([]);
-
-        for (let i = 0; i < item_list.length; i++) {
-            connection.query("SELECT * FROM Items_found_color WHERE item_id =" + item_list[i].item_id, (err, result) => {
-                const colors = result.map(e => e.color);
-                item_list[i].color = colors.toString();
-
-                if (i === item_list.length - 1) res.json(item_list);
-            });
-        }
+        res.json(result);
 
     })
 });
