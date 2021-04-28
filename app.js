@@ -693,7 +693,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         }
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
-                            res.json({'response':{'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"] }})
+                            res.json({'response':{'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"], 'itemID': qrAvailable[req_qr]["itemID"]}})
                         }
                     } else { //timeout or invalid
                         //noti user[token] QrExpire
@@ -799,12 +799,11 @@ app.post('/uploadFingerprint', upload.single('image'), (req,res)=>{
     const module_id = req.body.module_id;
     const type = req.body.type;
     const device_token = req.body.device_token;
-    //upload fingerprint
-    const record= true; //success store fingerprint
-    //if(err) throw err
+    const itemID = req.body.itemID
+
     if (fingerprint){
         console.log('Open module ' + module_id)
-        res.json({'openModule': module_id, 'type': type, 'device_token': device_token, 'fingerprintUrl': fingerprint});
+        res.json({'openModule': module_id, 'type': type, 'device_token': device_token, 'fingerprintUrl': fingerprint, 'itemID': itemID});
     }
 })
 
