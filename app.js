@@ -356,7 +356,6 @@ app.post('/claim',(req, res) => { //type=== 'lost'
             })
         }
     })
-    //res.send(qr_id)
 })
 
 //Report
@@ -647,27 +646,99 @@ app.get('/informClient', (req, res) => { //for hardware
                         delete qrAvailable[req_qr]["scanInterval"];
                         console.log('QRisValid: '+req_qr)
                         if (qrAvailable[req_qr]["type"] === 'found'){
+                            messages = [{
+                                    to : qrAvailable[req_qr]["deviceToken"],
+                                    sound: "default",
+                                    title: `Station ${qrAvailable[req_qr]["location"]}`,
+                                    body: `The module ${qrAvailable[req_qr]["moduleID"]} is opened`,
+                                    data : {
+                                        msg: `module ${qrAvailable[req_qr]["moduleID"]} is opened`,
+                                        itemid: qrAvailable[req_qr]["itemID"],
+                                        type: qrAvailable[req_qr]["type"]
+                                    }
+                                }];
+                            noti(messages)
                             //noti user[token] `module: ${module_id} is opened`
                             console.log('Open module ' + qrAvailable[req_qr]["moduleID"])
                             res.json({'response':{'openModule': qrAvailable[req_qr]["moduleID"], 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] }});
                         }
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
+                            messages = [{
+                                to : qrAvailable[req_qr]["deviceToken"],
+                                sound: "default",
+                                title: `Station ${qrAvailable[req_qr]["location"]}`,
+                                body: `Please scan your fingerprint with your right thumb`,
+                                data : {
+                                    msg: `module ${qrAvailable[req_qr]["moduleID"]} is waiting to open`,
+                                    itemid: qrAvailable[req_qr]["itemID"],
+                                    type: qrAvailable[req_qr]["type"]
+                                }
+                            }];
+                            noti(messages)
                             res.json({'response':{'scanFingerprint':qrAvailable[req_qr]["deviceToken"], 'openModule':qrAvailable[req_qr]["moduleID"], 'type':qrAvailable[req_qr]["type"], 'itemID': qrAvailable[req_qr]["itemID"]}})
                         }
                     } else { //timeout or invalid
                         //noti user[token] QrExpire
+                        messages = [{
+                            to : qrAvailable[req_qr]["deviceToken"],
+                            sound: "default",
+                            title: `Station ${qrAvailable[req_qr]["location"]}`,
+                            body: `Qr code is expired. Please restart the process`,
+                            data : {
+                                msg: `Qr expire`,
+                                itemid: qrAvailable[req_qr]["itemID"],
+                                type: qrAvailable[req_qr]["type"]
+                            }
+                        }];
+                        noti(messages)
                         res.send({'response': 'QR expire '+req_qr});
                     }
                 }else{
+                    messages = [{
+                        to : qrAvailable[req_qr]["deviceToken"],
+                        sound: "default",
+                        title: `Station ${req_module}`,
+                        body: `Wrong station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
+                        data : {
+                            msg: `Wrong Station`,
+                            itemid: qrAvailable[req_qr]["itemID"],
+                            type: qrAvailable[req_qr]["type"]
+                        }
+                    }];
+                    noti(messages)
                     res.send({'response': 'wrongStation'+ req_qr})
                 }
             }else{
+                messages = [{
+                    to : qrAvailable[req_qr]["deviceToken"],
+                    sound: "default",
+                    title: `Station ${req_module}`,
+                    body: `Invalid QR code. Please proceed again with a new one`,
+                    data : {
+                        msg: `Invalid qr`,
+                        itemid: qrAvailable[req_qr]["itemID"],
+                        type: qrAvailable[req_qr]["type"]
+                    }
+                }];
+                noti(messages)
                 res.send({'response': 'invalidQR'+req_qr})
             }
         break;
         case 'QrExpire':
                 //noti user[token] QrExpire
+                messages = [{
+                    to : qrAvailable[req_qr]["deviceToken"],
+                    sound: "default",
+                    title: `Station ${qrAvailable[req_qr]["location"]}`,
+                    body: `Qr code is expired. Please restart the process`,
+                    data : {
+                        msg: `Qr expire`,
+                        itemid: qrAvailable[req_qr]["itemID"],
+                        type: qrAvailable[req_qr]["type"]
+                    }
+                }];
+                noti(messages)
                 res.send('ExpireNotiSentTo: '+ qrAvailable[req_qr]["deviceToken"]) 
         break;
         case 'moduleClosed':
@@ -689,6 +760,18 @@ app.get('/informClient', (req, res) => { //for hardware
                     console.log(`UPDATE vacancy module_id: ${module_id}`)
                 })
                 //noti user found item is stored successfully
+                messages = [{
+                    to : device_token,
+                    sound: "default",
+                    title: `Station ${module_id.substring(0,4)}`,
+                    body: `Item is stored successfully, thanks for helping Chula community! `,
+                    data : {
+                        msg: `Store Success`,
+                        itemid: item_id,
+                        type: type
+                    }
+                }];
+                noti(messages)
                 res.send({"moduleID": module_id, "vacancy": 1})
             }
             if (type === 'lost'){
@@ -716,12 +799,33 @@ app.get('/informClient', (req, res) => { //for hardware
                             if (err) throw err;
                             console.log(`UPDATE vacancy module_id: ${module_id}`)
                         })
-                        
-                        
-
+                        messages = [{
+                            to : device_token,
+                            sound: "default",
+                            title: `Station ${module_id.substring(0,4)}`,
+                            body: `Item is Claimed, Thanks for using LaFaaS `,
+                            data : {
+                                msg: `Claim Success`,
+                                itemid: item_id,
+                                type: type
+                            }
+                        }];
+                        noti(messages)
                         //send noti claim successfully
                         res.send({"moduleID": module_id, "vacancy": 0})
                     }else{
+                        messages = [{
+                            to : device_token,
+                            sound: "default",
+                            title: `Station ${module_id.substring(0,4)}`,
+                            body: `Claiming is canceled`,
+                            data : {
+                                msg: `Claim cancel`,
+                                itemid: item_id,
+                                type: type
+                            }
+                        }];
+                        noti(messages)
                         //send noti claim canceled
                         res.send({"moduleID": module_id, "vacancy": 1})
                     }
@@ -751,7 +855,6 @@ app.get('/cancelClaim',(req,res)=>{
                 console.log(`RESET Item_found item_id: ${qrAvailable[req_qr]["itemID"]} from reserved --> registered`) //set type back to registered  
                 console.log("==========================================")
             })
-            //send noti claim cancel pls put the item back and shut the door
             res.send(`claim qr id: ${req_qr}, cancel`)
         }
         else{
