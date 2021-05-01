@@ -693,9 +693,8 @@ app.get('/informClient', (req, res) => { //for hardware
                                     title: `Station ${qrAvailable[req_qr]["location"]}`,
                                     body: `The module ${qrAvailable[req_qr]["moduleID"]} is opened`,
                                     data : {
-                                        msg: `module ${qrAvailable[req_qr]["moduleID"]} is opened`,
-                                        itemid: qrAvailable[req_qr]["itemID"],
-                                        type: qrAvailable[req_qr]["type"]
+                                        msg: `The module ${qrAvailable[req_qr]["moduleID"]} is opened`,
+                                        id: 1
                                     }
                                 }];
                             noti(messages)
@@ -711,9 +710,9 @@ app.get('/informClient', (req, res) => { //for hardware
                                 title: `Station ${qrAvailable[req_qr]["location"]}`,
                                 body: `Please scan your fingerprint with your right thumb`,
                                 data : {
-                                    msg: `module ${qrAvailable[req_qr]["moduleID"]} is waiting to open`,
-                                    itemid: qrAvailable[req_qr]["itemID"],
-                                    type: qrAvailable[req_qr]["type"]
+                                    msg: `Please scan your fingerprint with your right thumb.
+                                    Module ${qrAvailable[req_qr]["moduleID"]} is waiting to open.`,
+                                    id: 1
                                 }
                             }];
                             noti(messages)
@@ -727,9 +726,8 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${qrAvailable[req_qr]["location"]}`,
                             body: `Qr code is expired. Please restart the process`,
                             data : {
-                                msg: `Qr expire`,
-                                itemid: qrAvailable[req_qr]["itemID"],
-                                type: qrAvailable[req_qr]["type"]
+                                msg: `Qr code is expired. Please restart the process`,
+                                id: 1
                             }
                         }];
                         noti(messages)
@@ -748,8 +746,7 @@ app.get('/informClient', (req, res) => { //for hardware
                                 body: `All expired module in ${req_module} is opened`,
                                 data : {
                                     msg: `All expired module in ${req_module} is opened`,
-                                    itemid: qrAvailable[req_qr]["itemID"],
-                                    type: qrAvailable[req_qr]["type"]
+                                    id: 1
                                 }
                             }];
                             noti(messages)
@@ -790,9 +787,8 @@ app.get('/informClient', (req, res) => { //for hardware
                         title: `Station ${req_module}`,
                         body: `Wrong station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
                         data : {
-                            msg: `Wrong Station`,
-                            itemid: qrAvailable[req_qr]["itemID"],
-                            type: qrAvailable[req_qr]["type"]
+                            msg: `Wrong Station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
+                            id: 1
                         }
                     }];
                     noti(messages)
@@ -805,9 +801,8 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${req_module}`,
                     body: `Invalid QR code. Please proceed again with a new one`,
                     data : {
-                        msg: `Invalid qr`,
-                        itemid: qrAvailable[req_qr]["itemID"],
-                        type: qrAvailable[req_qr]["type"]
+                        msg: `Invalid QR code. Please proceed again with a new one`,
+                        id: 1
                     }
                 }];
                 noti(messages)
@@ -822,9 +817,8 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${qrAvailable[req_qr]["location"]}`,
                     body: `Qr code is expired. Please restart the process`,
                     data : {
-                        msg: `Qr expire`,
-                        itemid: qrAvailable[req_qr]["itemID"],
-                        type: qrAvailable[req_qr]["type"]
+                        msg: `Qr code is expired. Please restart the process`,
+                        id: 1
                     }
                 }];
                 noti(messages)
@@ -855,9 +849,8 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${module_id.substring(0,4)}`,
                     body: `Item is stored successfully, thanks for helping Chula community! `,
                     data : {
-                        msg: `Store Success`,
-                        itemid: item_id,
-                        type: type
+                        msg: `Item is stored successfully, thanks for helping Chula community!`,
+                        id: 1
                     }
                 }];
                 noti(messages)
@@ -894,9 +887,8 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Item is Claimed, Thanks for using LaFaaS `,
                             data : {
-                                msg: `Claim Success`,
-                                itemid: item_id,
-                                type: type
+                                msg: `Item is Claimed, Thanks for using LaFaaS`,
+                                id: 1
                             }
                         }];
                         noti(messages)
@@ -909,9 +901,8 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Claiming is canceled`,
                             data : {
-                                msg: `Claim cancel`,
-                                itemid: item_id,
-                                type: type
+                                msg: `Claiming is canceled`,
+                                id: 1
                             }
                         }];
                         noti(messages)
