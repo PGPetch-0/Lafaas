@@ -850,7 +850,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     body: `Item is stored successfully, thanks for helping Chula community! `,
                     data : {
                         msg: `Item is stored successfully, thanks for helping Chula community!`,
-                        id: 1
+                        id: 0
                     }
                 }];
                 noti(messages)
@@ -888,7 +888,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             body: `Item is Claimed, Thanks for using LaFaaS `,
                             data : {
                                 msg: `Item is Claimed, Thanks for using LaFaaS`,
-                                id: 1
+                                id: 0
                             }
                         }];
                         noti(messages)
@@ -954,6 +954,17 @@ app.post('/uploadFingerprint', upload.single('image'), (req,res)=>{
 
     if (fingerprint){
         console.log('Open module ' + module_id)
+        messages = [{
+            to : `ExponentPushToken[${device_token}]`,
+            sound: "default",
+            title: `Station ${module_id.substring(0,4)}`,
+            body: `If it's not yours. Press cancel and shut the door`,
+            data : {
+                msg: `If it's not yours. Press cancel and shut the door`,
+                id: 2
+            }
+        }];
+        noti(messages)
         res.json({'openModule': module_id, 'type': type, 'device_token': device_token, 'fingerprintUrl': fingerprint, 'itemID': itemID});
     }
 })
