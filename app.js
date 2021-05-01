@@ -647,7 +647,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         console.log('QRisValid: '+req_qr)
                         if (qrAvailable[req_qr]["type"] === 'found'){
                             messages = [{
-                                    to : qrAvailable[req_qr]["deviceToken"],
+                                    to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                                     sound: "default",
                                     title: `Station ${qrAvailable[req_qr]["location"]}`,
                                     body: `The module ${qrAvailable[req_qr]["moduleID"]} is opened`,
@@ -665,7 +665,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
                             messages = [{
-                                to : qrAvailable[req_qr]["deviceToken"],
+                                to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                                 sound: "default",
                                 title: `Station ${qrAvailable[req_qr]["location"]}`,
                                 body: `Please scan your fingerprint with your right thumb`,
@@ -681,7 +681,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     } else { //timeout or invalid
                         //noti user[token] QrExpire
                         messages = [{
-                            to : qrAvailable[req_qr]["deviceToken"],
+                            to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                             sound: "default",
                             title: `Station ${qrAvailable[req_qr]["location"]}`,
                             body: `Qr code is expired. Please restart the process`,
@@ -696,7 +696,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     }
                 }else{
                     messages = [{
-                        to : qrAvailable[req_qr]["deviceToken"],
+                        to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                         sound: "default",
                         title: `Station ${req_module}`,
                         body: `Wrong station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
@@ -711,7 +711,7 @@ app.get('/informClient', (req, res) => { //for hardware
                 }
             }else{
                 messages = [{
-                    to : qrAvailable[req_qr]["deviceToken"],
+                    to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                     sound: "default",
                     title: `Station ${req_module}`,
                     body: `Invalid QR code. Please proceed again with a new one`,
@@ -728,7 +728,7 @@ app.get('/informClient', (req, res) => { //for hardware
         case 'QrExpire':
                 //noti user[token] QrExpire
                 messages = [{
-                    to : qrAvailable[req_qr]["deviceToken"],
+                    to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                     sound: "default",
                     title: `Station ${qrAvailable[req_qr]["location"]}`,
                     body: `Qr code is expired. Please restart the process`,
@@ -761,7 +761,7 @@ app.get('/informClient', (req, res) => { //for hardware
                 })
                 //noti user found item is stored successfully
                 messages = [{
-                    to : device_token,
+                    to : `ExponentPushToken[${device_token}]`,
                     sound: "default",
                     title: `Station ${module_id.substring(0,4)}`,
                     body: `Item is stored successfully, thanks for helping Chula community! `,
@@ -800,7 +800,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             console.log(`UPDATE vacancy module_id: ${module_id}`)
                         })
                         messages = [{
-                            to : device_token,
+                            to : `ExponentPushToken[${device_token}]`,
                             sound: "default",
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Item is Claimed, Thanks for using LaFaaS `,
@@ -815,7 +815,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         res.send({"moduleID": module_id, "vacancy": 0})
                     }else{
                         messages = [{
-                            to : device_token,
+                            to : `ExponentPushToken[${device_token}]`,
                             sound: "default",
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Claiming is canceled`,
