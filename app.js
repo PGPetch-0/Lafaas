@@ -526,6 +526,9 @@ app.post('/useredit', (req, res) => {
     if (curr_pwd == connection.query(`SELECT password FROM Persons WHERE username=?`, [username])){
         connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
             if (err) throw err;
+            res.json({
+                message: "Current password is correct."
+            })
         });
     } else {
         res.json({
