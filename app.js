@@ -306,10 +306,16 @@ app.get('/item_reg', (req, res) => {
 
 //Item Claimed
 app.get('/item_claimed', (req, res) => {
-
     connection.query("SELECT F.*, GROUP_CONCAT(color SEPARATOR ',') AS color FROM Items_found_color FC, Items_found F WHERE F.item_id = FC.item_id AND type = 2 GROUP BY item_id", (err, result) => {
-
-        res.json(result);
+        const resultsWithReportFlag = result.map(item=>{
+            let reportable = 1;
+            if (item.description.includes('The item is now with faculty Lost and Found')){
+                reportable = 0;
+            }
+            item = {...item, reportable}
+            return item
+        })
+        res.json(resultsWithReportFlag);
 
     })
 });
@@ -330,7 +336,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
         else{
             connection.query(`SELECT item_id, module_id,noti_token FROM Stores, Persons WHERE item_id = ${found_id} AND pid = ${pid}`,(err,result)=>{
                 if(result.length !== 0 ){
-                    connection.query(`INSERT INTO Claims (item_id, national_id, tel) VALUE(${found_id},${national_id},${tel})`,(err,result)=>{
+                    connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${pid})`,(err,result)=>{
                         if(err) throw err; 
                         console.log(`CREATE Claims pid: ${pid}, item_id: ${found_id}`)  
                     })
@@ -368,17 +374,20 @@ app.post('/claim',(req, res) => { //type=== 'lost'
 
 app.post('/adminclaim', async (req,res)=>{
     const token = req.body.token
-    var result = jwt.verify(token, token_secret);
-    var username = result.username
-    const expireQuery = connection.promise().query("SELECT * FROM defaultdb.Stores WHERE module_id IS NOT NULL AND DATEDIFF(CURDATE(), date_added)>7")
-    const [expires,fileds] = await expireQuery
+    console.log(token)
+    const result = jwt.verify(token, token_secret);
+    const username = result.username
+    const qrid = current_qrid 
     if (username === 'admin'){
         const qr_id = await getQR(0,token,'admin','ALL1');
         res.on('finish', () => {
-            const timer = setTimeout(() =>{ 
-            }, 3600000);
+            const timer = setTimeout(() =>{
+                console.log(`Timer is end for qr_id: ${qrid} [ADMIN QR] `)
+                delete qrAvailable[qr_id]["scanInterval"]
+            }, 3*60*1000);
             qrAvailable[qr_id]["scanInterval"] = timer
         });
+        res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
     }else{
         res.send('Unauthorized')
     }
@@ -726,7 +735,55 @@ app.get('/informClient', (req, res) => { //for hardware
                         noti(messages)
                         res.send({'response': 'QR expire '+req_qr});
                     }
-                }else{
+                }
+                else if(qrAvailable[req_qr]["location"]=== 'ALL1'){
+                    if (qrAvailable[req_qr]["scanInterval"]) { //timer is running
+                        clearTimeout(qrAvailable[req_qr]["scanInterval"]); //stop then delete
+                        delete qrAvailable[req_qr]["scanInterval"];
+                        if(qrAvailable[req_qr]["type"] === 'admin'){
+                            messages = [{
+                                to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
+                                sound: "default",
+                                title: `Station ${req_module}`, //ALL1
+                                body: `All expired module in ${req_module} is opened`,
+                                data : {
+                                    msg: `All expired module in ${req_module} is opened`,
+                                    itemid: qrAvailable[req_qr]["itemID"],
+                                    type: qrAvailable[req_qr]["type"]
+                                }
+                            }];
+                            noti(messages)
+                            connection.query(`UPDATE Items_found SET type = 2, description=concat('The item is now with faculty Lost and Found ', description) WHERE item_id IN (
+                                            SELECT item_id FROM Stores WHERE module_id IS NOT NULL AND current_location='${req_module}' AND DATEDIFF(CURDATE(), date_added)>7)`)
+                            connection.query(`SELECT module_id FROM Stores WHERE module_id IS NOT NULL AND current_location='${req_module}' AND DATEDIFF(CURDATE(), date_added)>7`, (err,results)=>{
+                                if(err) console.log(err);
+                                console.log('Open expire module at ' + req_module)
+                                console.log(results)
+                                const moduleIDs = results.map(result=>{
+                                    moduleID = result.module_id
+                                    return moduleID
+                                })
+                                if (results.length !== 0){
+                                    const mString = moduleIDs.map(moduleID=>{
+                                        modulewith = '\''+moduleID+'\'';
+                                        return modulewith;
+                                    })
+                                    const modulesString = mString.toString();
+                                    console.log(modulesString);
+                                    connection.query(`UPDATE Lockers SET vacancy = 0 WHERE module_id IN (${modulesString})`,(err,results)=>{
+                                        if(err) console.log(err);
+                                    })
+                                }
+                                connection.query(`UPDATE Stores SET module_id = null WHERE current_location= '${req_module}' AND DATEDIFF(CURDATE(), date_added)>7`,(err,result)=>{
+                                    if(err) throw err;
+                                })
+                                res.json({'response':{'openModule': moduleIDs, 'type': qrAvailable[req_qr]["type"], 'device_token': qrAvailable[req_qr]["deviceToken"], 'itemID': qrAvailable[req_qr]["itemID"] }});
+                            })
+                            //noti user[token] `module: ${module_id} is opened`
+                        }
+                    }
+                }
+                else{
                     messages = [{
                         to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                         sound: "default",
@@ -813,7 +870,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     console.log(typeof result[0].type)
                     console.log(result[0])
                     if (result[0].type == 1){ //not cancel
-                        let sql = `UPDATE Claims SET module_id = '${module_id}', fingerprint = '${fingerprint}', date_claimed = '${date}' WHERE item_id = ${item_id}`
+                        let sql = `UPDATE Claims SET fingerprint = '${fingerprint}', date_claimed = '${date}' WHERE item_id = ${item_id}`
                         connection.query(sql,(err,result)=>{
                             if (err) throw err;
                             console.log(`UPDATE Claim with moduleID: ${module_id}, fingerprint = ${fingerprint}, date_claimed = ${date}`)
