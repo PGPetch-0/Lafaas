@@ -338,7 +338,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
             res.send("Item is claimed, Can't Claim this")
         }
         else{
-            connection.query(`SELECT item_id, module_id,noti_token,pid FROM Stores, Persons WHERE item_id = ${found_id} AND username = ${username}`,(err,result)=>{
+            connection.query(`SELECT item_id, module_id,noti_token,pid FROM Stores, Persons WHERE item_id = ${found_id} AND username = '${username}'`,(err,result)=>{
                 console.log(result);
                 if(result.length !== 0 ){
                     connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${result[0].pid})`,(err,result)=>{
