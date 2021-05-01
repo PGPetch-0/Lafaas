@@ -4,7 +4,7 @@ const http = require('http').createServer(app);
 const bodyParser = require('body-parser');
 const { Expo } = require('expo-server-sdk');
 const mysql = require('mysql2');
-const { expo } = new Expo();
+const expo = new Expo();
 const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
@@ -665,7 +665,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
                             messages = [{
-                                to : `ExponentPushToken[MuengThaiKraiGordai]`,
+                                to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
                                 sound: "default",
                                 title: `Station ${qrAvailable[req_qr]["location"]}`,
                                 body: `Please scan your fingerprint with your right thumb`,
