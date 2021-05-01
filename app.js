@@ -212,7 +212,7 @@ app.post('/login', (req, res) => {
                 message: 'User not found'
             })
         } else if (results[0].password === pass) {
-            connection.query(`UPDATE Persons SET noti_token=${token} WHERE username = ${user}`)
+            connection.query(`UPDATE Persons SET noti_token=${token} WHERE username = '${user}'`)
             res.json({
                 code: 1,
                 message: 'Successful login',
@@ -360,6 +360,8 @@ app.post('/claim',(req, res) => { //type=== 'lost'
         }
     })
 })
+
+
 
 //Report
 app.get('/report', (req,res) =>{
