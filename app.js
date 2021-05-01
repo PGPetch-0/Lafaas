@@ -342,8 +342,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                 console.log(result);
                 if(result.length !== 0 ){
                     connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${result[0].pid})`,(err,result)=>{
-                        if(err) throw err; 
-                        console.log(`CREATE Claims pid: ${result[0].pid}, item_id: ${found_id}`)  
+                        if(err) throw err;   
                     })
                     connection.query(`UPDATE Items_found SET type = 1 WHERE item_id = ${found_id}`,(err,result)=>{
                         if(err) throw err;
@@ -827,7 +826,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     }
                 }];
                 noti(messages)
-                res.send('ExpireNotiSentTo: '+ qrAvailable[req_qr]["deviceToken"]) 
+                res.send('qr_expire') 
         break;
         case 'moduleClosed':
             const type = req.query.type
