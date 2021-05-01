@@ -902,7 +902,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             body: `Claiming is canceled`,
                             data : {
                                 msg: `Claiming is canceled`,
-                                id: 1
+                                id: 3
                             }
                         }];
                         noti(messages)
