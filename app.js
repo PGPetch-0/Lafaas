@@ -369,9 +369,14 @@ app.post('/claim',(req, res) => { //type=== 'lost'
 app.post('/adminclaim', async (req,res)=>{
     const token = req.body.token
     const username = jwt.verify(token, secretkey);
+    const expireQuery = connection.promise().query("")
     if (username === 'admin'){
         const qr_id = await getQR(0,token,'admin','OPEN');
-
+        res.on('finish', () => {
+            const timer = setTimeout(() =>{ 
+            }, 3600000);
+            qrAvailable[qr_id]["scanInterval"] = timer
+        });
     }else{
         res.send('Unauthorized')
     }
@@ -512,10 +517,10 @@ app.get('/claimhist', (req, res) => {
 });
 
 //User Edit
-app.get('/useredit', (req, res) => {
-    var curr_pwd = req.query.curr_pwd;
-    var new_pwd = req.query.new_pwd;
-    var token = req.query.token;
+app.post('/useredit', (req, res) => {
+    var curr_pwd = req.body.curr_pwd;
+    var new_pwd = req.body.new_pwd;
+    var token = req.body.token;
     var username = jwt.verify(token, secretkey);
     //No username verification because to get to this point (changing password), user has to exist right?
     if (curr_pwd == connection.query(`SELECT password FROM Persons WHERE username=?`, [username])){
