@@ -951,7 +951,10 @@ app.post('/uploadFingerprint', upload.single('image'), (req,res)=>{
     const type = req.body.type;
     const device_token = req.body.device_token;
     const itemID = req.body.itemID
-
+    var qr_id;
+    for (let qrid in qrAvailable){
+        if(qrAvailable[qrid].deviceToken === device_token) qr_id = qrid
+    } 
     if (fingerprint){
         console.log('Open module ' + module_id)
         messages = [{
@@ -961,7 +964,9 @@ app.post('/uploadFingerprint', upload.single('image'), (req,res)=>{
             body: `If it's not yours. Press cancel and shut the door`,
             data : {
                 msg: `If it's not yours. Press cancel and shut the door`,
-                id: 2
+                id: 2,
+                qrid: qr_id
+
             }
         }];
         noti(messages)
