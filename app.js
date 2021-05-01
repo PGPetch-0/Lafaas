@@ -849,8 +849,8 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${module_id.substring(0,4)}`,
                     body: `Item is stored successfully, thanks for helping Chula community! `,
                     data : {
-                        msg: `Item is stored successfully, thanks for helping Chula community!`,
-                        id: 0
+                        id: 0,
+                        type: 'found'
                     }
                 }];
                 noti(messages)
@@ -887,8 +887,8 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Item is Claimed, Thanks for using LaFaaS `,
                             data : {
-                                msg: `Item is Claimed, Thanks for using LaFaaS`,
-                                id: 0
+                                id: 0,
+                                type: "lost"
                             }
                         }];
                         noti(messages)
