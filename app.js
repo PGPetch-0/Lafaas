@@ -248,7 +248,7 @@ app.get('/db', (req, res) => { // used to check content of table
 
 ///Item Listing System Methods
 //My registered items
-app.get('/myregister', (req, res) => {
+app.get('/profile', (req, res) => {
     const token = req.query.token;
 
     let selection, source, condition, option;
@@ -266,7 +266,6 @@ app.get('/myregister', (req, res) => {
     option = "GROUP BY item_id";
     const query_found = selection + source + condition + option;
 
-
     let data = [];
     connection.query(query_lost, (err, result) => {
 
@@ -282,7 +281,13 @@ app.get('/myregister', (req, res) => {
                 data.push(e);
             })
 
-            res.json(data);
+            connection.query(`SELECT f_name, l_name FROM Persons WHERE noti_token='${token}'`,(err,results)=>{
+                
+                res.json({
+                        name: results[0].f_name+' '+results[0].l_name,
+                        data: data
+                });
+            })
         })
 
     })
