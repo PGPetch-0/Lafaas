@@ -370,9 +370,10 @@ app.post('/adminclaim', async (req,res)=>{
     const token = req.body.token
     var result = jwt.verify(token, token_secret);
     var username = result.username
-    const expireQuery = connection.promise().query("")
+    const expireQuery = connection.promise().query("SELECT * FROM defaultdb.Stores WHERE module_id IS NOT NULL AND DATEDIFF(CURDATE(), date_added)>7")
+    const [expires,fileds] = await expireQuery
     if (username === 'admin'){
-        const qr_id = await getQR(0,token,'admin','OPEN');
+        const qr_id = await getQR(0,token,'admin','ALL1');
         res.on('finish', () => {
             const timer = setTimeout(() =>{ 
             }, 3600000);
@@ -525,18 +526,20 @@ app.post('/useredit', (req, res) => {
     var result = jwt.verify(token, token_secret);
     var username = result.username
     //No username verification because to get to this point (changing password), user has to exist right?
-    if (curr_pwd == connection.query(`SELECT password FROM Persons WHERE username=?`, [username])){
-        connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
-            if (err) throw err;
+    connection.query(`SELECT password FROM Persons WHERE username=?`, [username], (err,results)=>{
+        if (curr_pwd == results[0].password){
+            connection.query(`UPDATE Persons SET password=? WHERE username=?`, [new_pwd, username], (err, results) => {
+                if (err) throw err;
+                res.json({
+                    message: "Current password is correct."
+                })
+            });
+        } else {
             res.json({
-                message: "Current password is correct."
-            })
-        });
-    } else {
-        res.json({
-            message: "Current password is incorrect."
-        });
-    }
+                message: "Current password is incorrect."
+            });
+        }
+    })
 });
 
 //PWD Recovery
