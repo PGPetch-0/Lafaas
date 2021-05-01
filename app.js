@@ -343,7 +343,7 @@ app.post('/claim',(req, res) => { //type=== 'lost'
                 if(result.length !== 0 ){
                     connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${result[0].pid})`,(err,result)=>{
                         if(err) throw err; 
-                        console.log(`CREATE Claims pid: ${pid}, item_id: ${found_id}`)  
+                        console.log(`CREATE Claims pid: ${result[0].pid}, item_id: ${found_id}`)  
                     })
                     connection.query(`UPDATE Items_found SET type = 1 WHERE item_id = ${found_id}`,(err,result)=>{
                         if(err) throw err;
