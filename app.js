@@ -212,7 +212,7 @@ app.post('/login', (req, res) => {
                 message: 'User not found'
             })
         } else if (results[0].password === pass) {
-            connection.query(`UPDATE Persons SET noti_token=${token} WHERE username = '${user}'`)
+            connection.query(`UPDATE Persons SET noti_token='${token}' WHERE username = '${user}'`)
             res.json({
                 code: 1,
                 message: 'Successful login',
@@ -366,7 +366,16 @@ app.post('/claim',(req, res) => { //type=== 'lost'
     })
 })
 
+app.post('/adminclaim', async (req,res)=>{
+    const token = req.body.token
+    const username = jwt.verify(token, secretkey);
+    if (username === 'admin'){
+        const qr_id = await getQR(0,token,'admin','OPEN');
 
+    }else{
+        res.send('Unauthorized')
+    }
+})
 
 //Report
 app.get('/report', (req,res) =>{
