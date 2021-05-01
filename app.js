@@ -665,7 +665,7 @@ app.get('/informClient', (req, res) => { //for hardware
                         else if(qrAvailable[req_qr]["type"] === 'lost'){
                             //noti[token] 'scanFinger'
                             messages = [{
-                                to : `ExponentPushToken[${qrAvailable[req_qr]["deviceToken"]}]`,
+                                to : `ExponentPushToken[MuengThaiKraiGordai]`,
                                 sound: "default",
                                 title: `Station ${qrAvailable[req_qr]["location"]}`,
                                 body: `Please scan your fingerprint with your right thumb`,
