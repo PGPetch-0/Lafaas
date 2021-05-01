@@ -188,7 +188,8 @@ app.post('/createuser', (req, res) => {
                     res.json({
                         code: 1,
                         message: 'Success',
-                        token: generateToken(req.body.user)
+                        token: generateToken(req.body.user),
+                        name: req.body.user
                     })
                 });
         }
@@ -198,6 +199,7 @@ app.post('/createuser', (req, res) => {
 app.post('/login', (req, res) => {
     let user = req.body.user;
     let pass = req.body.pass;
+    let token = req.body.noti_token;
     let find = "SELECT username,password FROM Persons WHERE username='" + user + "'";
     connection.query(find, function (err, results) {
         if (err) {
@@ -210,6 +212,7 @@ app.post('/login', (req, res) => {
                 message: 'User not found'
             })
         } else if (results[0].password === pass) {
+            connection.query(`UPDATE Persons SET noti_token=${token} WHERE username = ${user}`)
             res.json({
                 code: 1,
                 message: 'Successful login',
