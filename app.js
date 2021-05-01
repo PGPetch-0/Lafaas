@@ -321,7 +321,9 @@ app.get('/item_claimed', (req, res) => {
 });
 
 app.post('/claim',(req, res) => { //type=== 'lost'
-    const pid = req.body.pid
+    const token = req.body.token
+    const something = jwt.verify(token, token_secret)
+    const username = something.username
     const found_id = req.body.item_id
     const national_id = req.body.national_id
     const tel = req.body.tel
@@ -334,9 +336,9 @@ app.post('/claim',(req, res) => { //type=== 'lost'
             res.send("Item is claimed, Can't Claim this")
         }
         else{
-            connection.query(`SELECT item_id, module_id,noti_token FROM Stores, Persons WHERE item_id = ${found_id} AND pid = ${pid}`,(err,result)=>{
+            connection.query(`SELECT item_id, module_id,noti_token,pid FROM Stores, Persons WHERE item_id = ${found_id} AND username = ${username}`,(err,result)=>{
                 if(result.length !== 0 ){
-                    connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${pid})`,(err,result)=>{
+                    connection.query(`INSERT INTO Claims (item_id, national_id, tel, pid) VALUE(${found_id},${national_id},${tel},${result[0].pid})`,(err,result)=>{
                         if(err) throw err; 
                         console.log(`CREATE Claims pid: ${pid}, item_id: ${found_id}`)  
                     })
