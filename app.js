@@ -714,8 +714,7 @@ app.get('/informClient', (req, res) => { //for hardware
                                 title: `Station ${qrAvailable[req_qr]["location"]}`,
                                 body: `Please scan your fingerprint with your right thumb`,
                                 data : {
-                                    msg: `Please scan your fingerprint with your right thumb.
-                                    Module ${qrAvailable[req_qr]["moduleID"]} is waiting to open.`,
+                                    msg: `Please scan your fingerprint with your right thumb`,
                                     id: 1
                                 }
                             }];
@@ -730,7 +729,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${qrAvailable[req_qr]["location"]}`,
                             body: `Qr code is expired. Please restart the process`,
                             data : {
-                                msg: `Qr code is expired. Please restart the process`,
+                                msg: `QR Code is expired, Please restart the process`,
                                 id: 1
                             }
                         }];
@@ -791,7 +790,8 @@ app.get('/informClient', (req, res) => { //for hardware
                         title: `Station ${req_module}`,
                         body: `Wrong station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
                         data : {
-                            msg: `Wrong Station. Please go to ${qrAvailable[req_qr]["location"]}. You are now at ${req_module}`,
+                            msg: `Wrong Station, Please go to ${qrAvailable[req_qr]["location"]}`,
+                            msg2: `You are now at ${req_module}`,
                             id: 1
                         }
                     }];
@@ -805,7 +805,8 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${req_module}`,
                     body: `Invalid QR code. Please proceed again with a new one`,
                     data : {
-                        msg: `Invalid QR code. Please proceed again with a new one`,
+                        msg: `Invalid QR code`,
+                        msg2: `Please proceed again with a new one`,
                         id: 1
                     }
                 }];
@@ -821,7 +822,7 @@ app.get('/informClient', (req, res) => { //for hardware
                     title: `Station ${qrAvailable[req_qr]["location"]}`,
                     body: `Qr code is expired. Please restart the process`,
                     data : {
-                        msg: `Qr code is expired. Please restart the process`,
+                        msg: `QR Code is expired, Please restart the process`,
                         id: 1
                     }
                 }];
@@ -905,7 +906,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${module_id.substring(0,4)}`,
                             body: `Claiming is canceled`,
                             data : {
-                                msg: `Claiming is canceled`,
+                                msg: `Claiming process is canceled`,
                                 id: 3
                             }
                         }];
