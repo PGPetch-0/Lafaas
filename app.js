@@ -729,7 +729,8 @@ app.get('/informClient', (req, res) => { //for hardware
                             title: `Station ${qrAvailable[req_qr]["location"]}`,
                             body: `Qr code is expired. Please restart the process`,
                             data : {
-                                msg: `QR Code is expired, Please restart the process`,
+                                msg: `QR Code is expired',
+                                msg2: 'Please restart the process',
                                 id: 1
                             }
                         }];
