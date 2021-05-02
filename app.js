@@ -85,92 +85,93 @@ app.post('/registeritem',upload.single('image'),  (req,res) =>{ // upload pictur
     //color for 2nd table
     var colors = req.body.color.split(','); // sent as string of colors divided by ,
     //variables for Items_found
-    var type;
-    var device_token;
+    var device_token = req.body.device_token;
     // var date_added = new Date().toISOString().slice(0, 10); // new Date() will give current date
-    // console.log(date_added);
-    if(colors.length == 0){
+    // console.log(date_added);\
+    if(colors[0] === ''){
         res.send('color missing');
-    }
-    if(req.body.type == 'found' ){
-        type = 0; //freshly registered item will always have type found. Cannot be reserved or claimed.
-        device_token = req.body.device_token;
+        return;
     }
         //insert according to type
-        if(req.body.type == 'lost'){
-            if(colors.length >2) res.send("There can be at most 2 colors!");
-            var qrystr = "INSERT INTO `Items_lost`(item_name, location_lat, location_long, location_desc, description, category) VALUES('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
-            connection.query(qrystr,
-                function(err,results){
-                    if(err) console.log(err);
-                    getItemLostID(function(item_id){
-                        connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[0]], function(err,results){
-                            if(err) console.log(err);
-                            console.log("color1 got called");
-                        })
-                        if(colors.length==2){
-                            connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[1]], function(err,results){
-                                if(err) console.log(err);
-                                console.log("color2 got called");
-                            })
-                        }
-                        const result = match(item_id,'lost');
-                        (async () => {
-                            const result = await match(item_id,'lost');
-                            console.log("result:",result);
-                            res.send(result);
-                        })();
-                    })
-                }
-            );
-        }else if(req.body.type == 'found'){
-            var qrystr2 = "INSERT INTO `Items_found`(item_name, location_lat, location_long, location_desc, description, category, type, image_url, device_token) VALUES (?,?,?,?,?,?,?,?,?)";
-            var qryarr = [item_name, location_lat, location_long, location_desc, description, category, 0, req.file.location, device_token];
-            connection.query(
-            qrystr2, qryarr,
-                function(err,results){
-                    if(err) console.log(err);
-                    getItemFoundID(function(item_id){
-                        var i;
-                        for(i=0; i<colors.length; i++){
-                            connection.query("INSERT INTO `Items_found_color` (item_id, color) VALUES (?, ?)", [item_id, colors[i]], function(err,results){
-                                if(err) console.log(err);
-                                console.log("color got called: " +i);
-                            })
-                        }
-                        (async () => {
-                            const result = await match(item_id,'found');
-                            console.log("result:",result);
-                            if(result.code == 0) {
-                                //set timer to one hour, if exceeds, delete entry
-                                //res QR data to frontend
-                                const qrid = current_qrid
-                                getQR(item_id,device_token,'found')
-                                .then((qr_id)=>{
-                                    res.on('finish', () => {
-                                        const timer = setTimeout(() =>{ //timeout remove claim
-                                            console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [FOUND]`)
-                                            delete qrAvailable[qr_id]["scanInterval"]
-                                            connection.query(`DELETE FROM Items_found_color WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                                                console.log(`DELETE FROM Items_found_color item_id: ${qrAvailable[qrid]["itemID"]} row deleted: ` + result.affectedRows)
-                                                connection.query(`DELETE FROM Items_found WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
-                                                    if(err) throw err;
-                                                    console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
-                                                })
-                                            })
-                                        }, 3600000);
-                                        qrAvailable[qr_id]["scanInterval"] = timer
-                                    });                
-                                    res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
-                                }) 
-                            }
-                        })();
-                    })
-                }
-            );
-        }else{
-            res.send('type parameter error');
+    if(req.body.type == 'lost'){
+        if(colors.length >2) {
+            res.send("There can be at most 2 colors!");
+            return;
         }
+        var qrystr = "INSERT INTO `Items_lost`(item_name, location_lat, location_long, location_desc, description, category) VALUES('" + item_name + "', " +location_lat+", " +location_long+",'" + location_desc+"', '"+description+"', '" +category +"')";
+        connection.query(qrystr,
+            function(err,results){
+                if(err) console.log(err);
+                getItemLostID(function(item_id){
+                    connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[0]], function(err,results){
+                        if(err) console.log(err);
+                        console.log("color1 got called");
+                    })
+                    if(colors.length==2){
+                        connection.query("INSERT INTO `Items_lost_color` (item_id, color) VALUES (?, ?)", [item_id, colors[1]], function(err,results){
+                            if(err) console.log(err);
+                            console.log("color2 got called");
+                        })
+                    }
+                    connection.query(`INSERT INTO Loses (pid, item_id) SELECT p.pid,${results.insertId} FROM Persons p WHERE noti_token = '${device_token}'`,(err,result)=>{
+                        if (err) console.log(err)
+                    });
+                    (async () => {
+                        const result = await match(item_id,'lost');
+                        console.log("result:",result);
+                        res.send(result);
+                    })();
+                })
+            }
+        );
+    }else if(req.body.type == 'found'){
+        var qrystr2 = "INSERT INTO `Items_found`(item_name, location_lat, location_long, location_desc, description, category, type, image_url, device_token) VALUES (?,?,?,?,?,?,?,?,?)";
+        var qryarr = [item_name, location_lat, location_long, location_desc, description, category, 0, req.file.location, device_token];
+        connection.query(
+        qrystr2, qryarr,
+            function(err,results){
+                if(err) console.log(err);
+                getItemFoundID(function(item_id){
+                    var i;
+                    for(i=0; i<colors.length; i++){
+                        connection.query("INSERT INTO `Items_found_color` (item_id, color) VALUES (?, ?)", [item_id, colors[i]], function(err,results){
+                            if(err) console.log(err);
+                            console.log("color got called: " +i);
+                        })
+                    }
+                    (async () => {
+                        const result = await match(item_id,'found');
+                        console.log("result:",result);
+                        if(result.code == 0) {
+                            //set timer to one hour, if exceeds, delete entry
+                            //res QR data to frontend
+                            const qrid = current_qrid
+                            getQR(item_id,device_token,'found')
+                            .then((qr_id)=>{
+                                res.on('finish', () => {
+                                    const timer = setTimeout(() =>{ //timeout remove claim
+                                        console.log(`Timer is end for qr_id: ${qrid} NO USER SCAN [FOUND]`)
+                                        delete qrAvailable[qr_id]["scanInterval"]
+                                        connection.query(`DELETE FROM Items_found_color WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                            console.log(`DELETE FROM Items_found_color item_id: ${qrAvailable[qrid]["itemID"]} row deleted: ` + result.affectedRows)
+                                            connection.query(`DELETE FROM Items_found WHERE item_id = ${qrAvailable[qrid]["itemID"]}`,(err,result)=>{
+                                                if(err) throw err;
+                                                console.log(`DELETE FROM Items_found item_id: ${qrAvailable[qrid]["itemID"]}`)  
+                                            })
+                                        })
+                                    }, 3600000);
+                                    qrAvailable[qr_id]["scanInterval"] = timer
+                                });                
+                                res.send(''+qr_id+','+qrAvailable[qr_id]["timestamp"])
+                            }) 
+                        }
+                    })();
+                })
+            }
+        );
+    }else{
+        res.send('type parameter error');
+    }
 });
 
 app.post('/createuser', (req, res) => {
@@ -636,12 +637,13 @@ async function getModuleID(item_id){
       let lockerWithDistance = {...locker, distance}
       lockersWithDistance = [...lockersWithDistance, lockerWithDistance]
     })
-    var shortestDistance = Math.min.apply(Math,lockersWithDistance.map(function(locker){return locker.distance;}))
-    var retlocker = lockersWithDistance.find(function(locker){ return (locker.distance == shortestDistance && locker.vacancy == 0); })
+    const sortedLockerByDistance = lockersWithDistance.sort((a,b)=> a.distance - b.distance)
+    var retlocker = sortedLockerByDistance.find((locker)=> locker.vacancy==0)
+    // var shortestDistance = Math.min.apply(Math,lockersWithDistance.map(function(locker){return locker.distance;}))
+    // var retlocker = lockersWithDistance.find(function(locker){ return (locker.distance == shortestDistance && locker.vacancy == 0); })
     console.log("Closest Available Locker: "+retlocker.module_id);
     return retlocker.module_id
 } 
-
 // app.get('/requestQRdata', (req, res) => { //for frontend client
 //     const item_id = req.query.item_id;
 //     const device_token = req.query.device_token;
@@ -858,6 +860,28 @@ app.get('/informClient', (req, res) => { //for hardware
                     }
                 }];
                 noti(messages)
+                (async ()=> {
+                    const data = await match(item_id,'found');
+                    console.log('data from async: '+data);
+                    if(data.code === 0){
+                        const notifyThis = data.item[0]
+                        connection.query(`SELECT noti_token FROM Persons, Loses WHERE Persons.pid = Loses.pid AND Loses.item_id = ${notifyThis.item_id}`,(err,result)=>{
+                            if(err) throw err;
+                            console.log(result[0].noti_token);
+                            messages = [{
+                                to : `ExponentPushToken[${result[0].noti_token}]`,
+                                sound: "default",
+                                title: `LaFaas`,
+                                body: `Potential item is found. Check if it yours `,
+                                data : {
+                                    id: 1,  //need change, I have no clues lol 
+                                    type: 'lost' 
+                                }
+                            }];
+                            noti(messages)
+                        })
+                    }
+                })();
                 res.send({"moduleID": module_id, "vacancy": 1})
             }
             if (type === 'lost'){
