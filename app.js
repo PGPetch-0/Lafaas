@@ -415,7 +415,7 @@ function match (item_id,type) {
     return new Promise((resolve,reject) => {
             let matchA = [];
             let colorA = [];
-        connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
+        connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id AND type = 0", [item_id], function(err, results) {
             if (err) {
                 reject(err);
             } else {
@@ -516,13 +516,6 @@ async function sortByDistance(lost_id,arr){
     console.log(distancefromLost)
     return distancefromLost
 }
-
-app.post('/msgHardware', (req, res) => {
-    const message = req.body
-    console.log(message)
-    res.set_head
-    res.send(message)
-})
 
 //Claims History
 app.get('/claimhist', (req, res) => {
@@ -913,6 +906,7 @@ app.get('/informClient', (req, res) => { //for hardware
                             if (err) throw err;
                             console.log(`UPDATE vacancy module_id: ${module_id}`)
                         })
+
                         messages = [{
                             to : `ExponentPushToken[${device_token}]`,
                             sound: "default",
