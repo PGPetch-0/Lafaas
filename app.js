@@ -864,13 +864,14 @@ app.get('/informClient', (req, res) => { //for hardware
                 noti(messages)
                 (async ()=> {
                     const data = await match(item_id,'found');
-                    console.log('data from async: '+data);
                     if(data.code === 0){
-                        const notifyThis = data.item[0]
+                        const notifyThis = (data.item)[0];
+                        console.log("(data.item)[0]: "+(data.item)[0])
                         connection.query(`SELECT noti_token FROM Persons, Loses WHERE Persons.pid = Loses.pid AND Loses.item_id = ${notifyThis.item_id}`,(err,result)=>{
                             if(err) throw err;
-                            console.log(result[0].noti_token);
-                            messages = [{
+                            console.log("Loses with item_id "+notifyThis.item_id + "is notified");
+                            if (result[0]){
+                                messages = [{
                                 to : `ExponentPushToken[${result[0].noti_token}]`,
                                 sound: "default",
                                 title: `LaFaas`,
@@ -878,9 +879,10 @@ app.get('/informClient', (req, res) => { //for hardware
                                 data : {
                                     id: 1,  //need change, I have no clues lol 
                                     type: 'lost' 
-                                }
-                            }];
-                            noti(messages)
+                                    }
+                                }];
+                                noti(messages)
+                            }
                         })
                     }
                 })();
