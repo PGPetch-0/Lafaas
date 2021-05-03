@@ -855,15 +855,18 @@ app.get('/informClient', (req, res) => { //for hardware
                     }
                 }];
                 noti(messages)
-                (async ()=> {
-                    const data = await match(item_id,'found');
+                match(item_id,'found')
+                .then(data=>{
+                    console.log(data.code === 0)
+                    console.log((data.item)[0])
                     if(data.code === 0){
                         const notifyThis = (data.item)[0];
                         console.log("(data.item)[0]: "+(data.item)[0])
                         connection.query(`SELECT noti_token FROM Persons, Loses WHERE Persons.pid = Loses.pid AND Loses.item_id = ${notifyThis.item_id}`,(err,result)=>{
                             if(err) throw err;
-                            console.log("Loses with item_id "+notifyThis.item_id + "is notified");
+                            console.log("Loses with item_id "+notifyThis.item_id + " is notified");
                             if (result[0]){
+                                console.log(result[0].noti_token);
                                 messages = [{
                                 to : `ExponentPushToken[${result[0].noti_token}]`,
                                 sound: "default",
@@ -878,7 +881,9 @@ app.get('/informClient', (req, res) => { //for hardware
                             }
                         })
                     }
-                })();
+                })
+                .catch(err=>{console.log(err);});
+                
                 res.send({"moduleID": module_id, "vacancy": 1})
             }
             if (type === 'lost'){
