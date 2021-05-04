@@ -413,7 +413,7 @@ app.post('/report', upload.single('image'),(req,res) =>{
     const username = result.username;
     const item_id = req.body.item_id;
     const message = req.body.message;
-    const url = req.body.location;
+    const url = req.file.location;
     connection.query(`INSERT INTO Reports (pid, item_id, message, evidence_url) SELECT pid,${item_id},'${message}','${url}', FROM Persons WHERE username = '${username}'`, function(err,result){
         if(err) console.log()
         console.log("inserted report");
