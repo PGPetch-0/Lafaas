@@ -864,25 +864,30 @@ app.get('/informClient', (req, res) => { //for hardware
                     if(data.code === 0){
                         const notifyThis = (data.item)[0];
                         console.log("(data.item)[0]: "+(data.item)[0])
-                        connection.query(`SELECT noti_token FROM Persons, Loses WHERE Persons.pid = Loses.pid AND Loses.item_id = ${notifyThis.item_id}`,(err,result)=>{
-                            if(err) throw err;
-                            console.log("Loses with item_id "+notifyThis.item_id + " is notified");
-                            if (result[0]){
-                                console.log(result[0].noti_token);
-                                messages = [{
-                                to : `ExponentPushToken[${result[0].noti_token}]`,
-                                sound: "default",
-                                title: `LaFaas`,
-                                body: `Potential item is found. Check if it yours `,
-                                data : {
-                                    id: 3,  //need change, I have no clues lol 
-                                    type: 'lost',
-                                    item: data.item[0] 
-                                    }
-                                }];
-                                noti(messages)
-                            }
-                        })
+                        connection.queey(`SELECT T.*, GROUP_CONCAT(TC.color SEPARATOR ',') AS color
+                        FROM Items_found T, Items_found_color TC
+                        WHERE T.item_id = TC.item_id AND T.item_id = ${item_id}
+                        GROUP BY item_id`,(err,item_founds)=>{
+                            connection.query(`SELECT noti_token FROM Persons, Loses WHERE Persons.pid = Loses.pid AND Loses.item_id = ${notifyThis.item_id}`,(err,result)=>{
+                                if(err) throw err;
+                                console.log("Loses with item_id "+notifyThis.item_id + " is notified");
+                                if (result[0]){
+                                    console.log(result[0].noti_token);
+                                    messages = [{
+                                    to : `ExponentPushToken[${result[0].noti_token}]`,
+                                    sound: "default",
+                                    title: `LaFaas`,
+                                    body: `Potential item is found. Check if it yours `,
+                                    data : {
+                                        id: 3,  //need change, I have no clues lol 
+                                        type: 'lost',
+                                        item: item_founds[0]
+                                        }
+                                    }];
+                                    noti(messages)
+                                }
+                            })
+                        })  
                     }
                 })
                 .catch(err=>{console.log(err);});
