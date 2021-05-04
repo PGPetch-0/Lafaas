@@ -399,7 +399,7 @@ app.post('/adminclaim', async (req,res)=>{
 })
 
 //Report
-app.get('/report', (req,res) =>{
+app.post('/report', upload.single('image'),(req,res) =>{
     const transporter = nodemailer.createTransport(smtpTransport({
         service: 'gmail', 
         host: 'stmp.gmail.com',
@@ -408,12 +408,13 @@ app.get('/report', (req,res) =>{
             pass: 'Lafaas2021'
         }
     }));
-    const pid = req.query.pid;
-    const item_id = req.query.item_id;
-    const message = req.query.message;
-    const url = req.query.evidence_url;
-    var date = new Date().toISOString().slice(0, 10);
-    connection.query("INSERT INTO `Reports` (pid, item_id, message, evidence_url, date_reported) VALUES (" + pid + ", '"+item_id+"', '"+message+"', '"+url+"',"+date+")", function(err,result){
+    const token = req.body.token;
+    const result = jwt.verify(token, token_secret);
+    const username = result.username;
+    const item_id = req.body.item_id;
+    const message = req.body.message;
+    const url = req.body.location;
+    connection.query(`INSERT INTO Reports (pid, item_id, message, evidence_url) SELECT pid,${item_id},'${message}','${url}', FROM Persons WHERE username = '${username}'`, function(err,result){
         if(err) console.log()
         console.log("inserted report");
         const mailOptions = {
@@ -880,6 +881,7 @@ app.get('/informClient', (req, res) => { //for hardware
                                     }
                                 }];
                                 noti(messages)
+
                             }
                         })
                     }
