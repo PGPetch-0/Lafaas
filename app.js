@@ -415,10 +415,12 @@ function match (item_id,type) {
     return new Promise((resolve,reject) => {
             let matchA = [];
             let colorA = [];
-        connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id", [item_id], function(err, results) {
+        connection.query("SELECT (JSON_OBJECT('name', Items_"+type+".item_name, 'category', Items_"+type+".category, 'item_id', Items_"+type+".item_id, 'latitude', Items_"+type+".location_lat, 'longtitude', Items_"+type+".location_long, 'location', Items_"+type+".location_desc, 'description', Items_"+type+".description, 'color', Items_"+type+"_color.color)) FROM Items_"+type+", Items_"+type+"_color WHERE Items_"+type+".item_id=? AND Items_"+type+".item_id = Items_"+type+"_color.item_id AND Items_"+type+".type = 0", [item_id], function(err, results) {
             if (err) {
                 reject(err);
             } else {
+                console.log(item_id,type);
+                console.log(results)
                 matchA = results.map(result => Object.values(result)[0]);
                 matchA.map(item => colorA.push(item.color))
                 matchA.map(item => item.color = colorA);
@@ -430,8 +432,8 @@ function match (item_id,type) {
                     return !duplicate;
                 })
                 let type2 = (type == 'lost')? 'found':'lost';
-                let qry = (type2 == 'found')? "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color, 'image_url', Items_"+type2+".image_url, 'device_token', Items_"+type2+".device_token)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id" : 
-                "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id";
+                let qry = (type2 == 'found')? "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color, 'image_url', Items_"+type2+".image_url, 'device_token', Items_"+type2+".device_token)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id AND Items_"+type2+".type = 0" : 
+                "SELECT (JSON_OBJECT('name', Items_"+type2+".item_name, 'category', Items_"+type2+".category, 'item_id', Items_"+type2+".item_id, 'latitude', Items_"+type2+".location_lat, 'longtitude', Items_"+type2+".location_long, 'location', Items_"+type2+".location_desc, 'description', Items_"+type2+".description, 'color', Items_"+type2+"_color.color)) FROM Items_"+type2+", Items_"+type2+"_color WHERE Items_"+type2+".category=? AND Items_"+type2+".item_id = Items_"+type2+"_color.item_id AND Items_"+type2+".type = 0";
                 connection.query(qry, matchA[0].category, async function(err, results) {
                     if (err) {
                         reject(err);
@@ -637,27 +639,7 @@ async function getModuleID(item_id){
     console.log("Closest Available Locker: "+retlocker.module_id);
     return retlocker.module_id
 } 
-// app.get('/requestQRdata', (req, res) => { //for frontend client
-//     const item_id = req.query.item_id;
-//     const device_token = req.query.device_token;
-//     const type = req.query.type;
-//     const item_current_location = req.query.item_current_location;
-
-//     res.on('finish', () => {
-//         const timer = setTimeout(() =>{
-//             console.log(`Timer is end ${device_token}`)
-//             delete scanInterval[device_token]
-//         }, 3600000);
-//         scanInterval[device_token] = timer;
-//     });
-
-//     const module_ID = 'ENG101' //getModuleID(item_current_location)
-//     const timestamp = Date.now();
-//     const QRdata = { "type": type,"moduleID": module_ID, "itemID": item_id, "location": item_current_location, "deviceToken": device_token, "TimeStamp": timestamp }
-//     res.json(QRdata);
-// })
-
-/* 
+/*
 {
    {
   1 : {
@@ -857,8 +839,6 @@ app.get('/informClient', (req, res) => { //for hardware
                 noti(messages)
                 match(item_id,'found')
                 .then(data=>{
-                    console.log(data.code === 0)
-                    console.log((data.item)[0])
                     if(data.code === 0){
                         const notifyThis = (data.item)[0];
                         console.log("(data.item)[0]: "+(data.item)[0])
