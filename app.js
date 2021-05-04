@@ -853,8 +853,9 @@ app.get('/informClient', (req, res) => { //for hardware
                                 title: `LaFaas`,
                                 body: `Potential item is found. Check if it yours `,
                                 data : {
-                                    id: 1,  //need change, I have no clues lol 
-                                    type: 'lost' 
+                                    id: 3,  //need change, I have no clues lol 
+                                    type: 'lost',
+                                    item: data.item[0] 
                                     }
                                 }];
                                 noti(messages)
