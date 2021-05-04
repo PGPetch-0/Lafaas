@@ -400,6 +400,14 @@ app.post('/adminclaim', async (req,res)=>{
 
 //Report
 app.get('/report', (req,res) =>{
+    const transporter = nodemailer.createTransport(smtpTransport({
+        service: 'gmail', 
+        host: 'stmp.gmail.com',
+        auth: {
+            user: 'lafaaschula@gmail.com',
+            pass: 'Lafaas2021'
+        }
+    }));
     const pid = req.query.pid;
     const item_id = req.query.item_id;
     const message = req.query.message;
@@ -407,6 +415,20 @@ app.get('/report', (req,res) =>{
     var date = new Date().toISOString().slice(0, 10);
     connection.query("INSERT INTO `Reports` (pid, item_id, message, evidence_url, date_reported) VALUES (" + pid + ", '"+item_id+"', '"+message+"', '"+url+"',"+date+")", function(err,result){
         if(err) console.log()
+        console.log("inserted report");
+        const mailOptions = {
+            from: 'lafaaschula@gmail.com',
+            to: 'lafaaschula@gmail.com',
+            subject: 'New Report Entry',
+            text: 'A new report has been filed 🎈\npid: '+pid+'\nitem id: '+item_id+'\nevidence: '+url+'\ndate: '+date+'\nmessage: '+message
+        }
+        transporter.sendMail(mailOptions, function(err, results) {
+            if (err) {
+                console.error(err);
+            } else {
+                console.log(results);
+            }
+        });
     })
 })
 
